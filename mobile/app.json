@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Anamboatra",
+    "slug": "anamboatra-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "anamboatra",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router"],
+    "extra": {
+      "API_URL": "",
+      "GOOGLE_MAPS_API_KEY": ""
+    }
+  }
+}

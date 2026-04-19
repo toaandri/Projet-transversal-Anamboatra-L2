@@ -1,0 +1,33 @@
+{
+  "name": "anamboatra-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API SGRI-2035 Anamboatra (Express, JWT, Socket.io, PostgreSQL)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "db:up": "docker compose -f docker-compose.yml up -d",
+    "db:down": "docker compose -f docker-compose.yml down",
+    "db:reset": "docker compose -f docker-compose.yml down -v && docker compose -f docker-compose.yml up -d"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-async-errors": "^3.1.1",
+    "express-validator": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.0",
+    "sequelize": "^6.37.3",
+    "socket.io": "^4.8.1",
+    "uuid": "^10.0.0"
+  }
+}

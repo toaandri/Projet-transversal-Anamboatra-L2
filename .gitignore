@@ -1,0 +1,77 @@
+# --- Dépendances Node ---
+node_modules/
+
+# --- Variables d’environnement (ne jamais versionner les secrets) ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# --- Journaux & debug npm ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Système d’exploitation ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- IDE / éditeurs ---
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Backend (API Anamboatra) ---
+backend/node_modules/
+backend/uploads/
+backend/coverage/
+backend/dist/
+backend/.turbo/
+backend/.env.example
+backend/sql/init_postgres.sql
+backend/docker-compose.yml
+
+# --- Artefacts temporaires (extraction cahier des charges, etc.) ---
+_docx_new/
+_cahier.zip
+_cahier_text.txt
+
+# --- Frontend React (dossier prévu) ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/coverage/
+
+
+# --- Mobile Expo / React Native (dossier prévu) ---
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# --- Tests & couverture (tout le dépôt) ---
+coverage/
+.nyc_output/
+
+# --- Divers ---
+*.tgz
+.temp/
+tmp/
+Cahier_des_charges_Anamboatra_v2.2.docx
+README.md

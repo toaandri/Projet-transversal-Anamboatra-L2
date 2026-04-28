@@ -200,6 +200,12 @@ router.post(
 
 /* ---------------------- Agents de réparation ---------------------- */
 /* (EQUIPE_INTERVENTION rattaché à un DEPOT_REPARATION, avec spécialité) */
+router.use('/agents', (_req, res) => {
+  return res.status(403).json({
+    message:
+      "La gestion des équipes de réparation est désormais déléguée aux communes (ADMIN_QG).",
+  });
+});
 
 async function findRepairAgent(id) {
   return User.findOne({

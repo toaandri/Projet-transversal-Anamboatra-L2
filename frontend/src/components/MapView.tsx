@@ -42,6 +42,12 @@ const TYPE_LABELS: Record<TypeInfrastructure, string> = {
 };
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
+const MADAGASCAR_BOUNDS = {
+  north: -10.8,
+  south: -27.2,
+  west: 41.6,
+  east: 52.8,
+};
 
 const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
 const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || '').trim() || undefined;
@@ -177,6 +183,8 @@ export function MapView({
         <Map
           defaultCenter={TANA}
           defaultZoom={12}
+          minZoom={5.8}
+          restriction={{ latLngBounds: MADAGASCAR_BOUNDS, strictBounds: true }}
           mapId={mapId}
           mapTypeId="hybrid"
           styles={mapId ? undefined : ANAMBOATRA_MAP_STYLE}

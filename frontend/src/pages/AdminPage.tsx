@@ -22,6 +22,7 @@ import {
   Map,
   Marker,
   Polygon,
+  useMap,
   type MapCameraChangedEvent,
   type MapMouseEvent,
 } from '@vis.gl/react-google-maps';
@@ -30,31 +31,28 @@ import { useAuth } from '../useAuth';
 import type {
   AdminQg,
   GeoJsonPolygon,
-  RepairAgent,
-  Specialite,
   TypeZone,
   Zone,
 } from '../types';
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
+const MADAGASCAR_BOUNDS = {
+  north: -10.8,
+  south: -27.2,
+  west: 41.6,
+  east: 52.8,
+};
 const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
 
 type AdminMode = 'jwt' | 'token';
 
-type Tab = 'zones' | 'qg' | 'reparation';
+type Tab = 'zones' | 'qg';
 
 const ZONE_TYPE_LABEL: Record<TypeZone, string> = {
   ARRONDISSEMENT: 'Arrondissement / Commune',
   ROUTE_NATIONALE: 'Route nationale',
   DEPOT_REPARATION: 'Dépôt de réparation',
 };
-
-const SPECIALITE_OPTIONS: { v: Specialite; l: string }[] = [
-  { v: 'ROUTE', l: 'Route (voirie)' },
-  { v: 'JIRAMA', l: 'JIRAMA (courant + eau)' },
-  { v: 'MACON', l: 'Maçon (bâtiment)' },
-  { v: 'NETTOYEUR', l: 'Nettoyeur (propreté)' },
-];
 
 type ZoneDraft = {
   id?: string;
@@ -93,6 +91,76 @@ function geoJsonToVertices(g: unknown): { lat: number; lng: number }[] {
   return cleaned.map(([lng, lat]) => ({ lat, lng }));
 }
 
+type RegionName =
+  | 'Antananarivo'
+  | 'Fianarantsoa'
+  | 'Toliara'
+  | 'Toamasina'
+  | 'Mahajanga'
+  | 'Antsiranana';
+
+const REGION_ANCHORS: Record<RegionName, { lat: number; lng: number }> = {
+  Antananarivo: { lat: -18.8792, lng: 47.5079 },
+  Fianarantsoa: { lat: -21.4536, lng: 47.0857 },
+  Toliara: { lat: -23.35, lng: 43.67 },
+  Toamasina: { lat: -18.1492, lng: 49.4023 },
+  Mahajanga: { lat: -15.7167, lng: 46.3167 },
+  Antsiranana: { lat: -12.2787, lng: 49.2917 },
+};
+
+const REGION_LABELS: Record<RegionName, string> = {
+  Antananarivo: 'Antananarivo',
+  Fianarantsoa: 'Fianarantsoa',
+  Toliara: 'Toliara',
+  Toamasina: 'Toamasina (Tamatave)',
+  Mahajanga: 'Mahajanga',
+  Antsiranana: 'Antsiranana',
+};
+
+const REGION_ALIASES: Record<RegionName, string[]> = {
+  Antananarivo: ['antananarivo', 'tana'],
+  Fianarantsoa: ['fianarantsoa'],
+  Toliara: ['toliara', 'tulear', 'tulear'],
+  Toamasina: ['toamasina', 'tamatave'],
+  Mahajanga: ['mahajanga', 'majunga'],
+  Antsiranana: ['antsiranana', 'diego', 'diego suarez'],
+};
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+}
+
+function centroidOfRing(vertices: { lat: number; lng: number }[]): { lat: number; lng: number } | null {
+  if (vertices.length === 0) return null;
+  const sum = vertices.reduce(
+    (acc, v) => ({ lat: acc.lat + v.lat, lng: acc.lng + v.lng }),
+    { lat: 0, lng: 0 },
+  );
+  return { lat: sum.lat / vertices.length, lng: sum.lng / vertices.length };
+}
+
+function inferRegionFromVertices(vertices: { lat: number; lng: number }[]): RegionName {
+  const c = centroidOfRing(vertices);
+  if (!c) return 'Antananarivo';
+  const entries = Object.entries(REGION_ANCHORS) as [RegionName, { lat: number; lng: number }][];
+  let best: RegionName = 'Antananarivo';
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (const [name, anchor] of entries) {
+    const dLat = c.lat - anchor.lat;
+    const dLng = c.lng - anchor.lng;
+    const dist = dLat * dLat + dLng * dLng;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = name;
+    }
+  }
+  return best;
+}
+
 export function AdminPage() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
@@ -108,7 +176,6 @@ export function AdminPage() {
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [admins, setAdmins] = useState<AdminQg[]>([]);
-  const [repairs, setRepairs] = useState<RepairAgent[]>([]);
   const [draft, setDraft] = useState<ZoneDraft>(EMPTY_DRAFT);
 
   const adminOpts = useMemo(
@@ -118,14 +185,12 @@ export function AdminPage() {
 
   const refresh = useCallback(
     async (opts: { adminToken?: string | null }) => {
-      const [z, a, r] = await Promise.all([
+      const [z, a] = await Promise.all([
         api.adminListZones(opts),
         api.adminListQgAdmins(opts),
-        api.adminListRepairAgents(opts),
       ]);
       setZones(z.zones);
       setAdmins(a.admins);
-      setRepairs(r.agents);
     },
     [],
   );
@@ -265,15 +330,6 @@ export function AdminPage() {
         </nav>
       </header>
 
-      <div className="top-actions">
-        <Link to="/" className="btn btn-ghost">
-          Portail public
-        </Link>
-        <button type="button" className="btn btn-ghost" onClick={signOut}>
-          {mode === 'token' ? 'Verrouiller' : 'Déconnexion'}
-        </button>
-      </div>
-
       <div className={`dash-grid${sideOpen ? '' : ' side-closed'}`}>
         <button
           type="button"
@@ -296,6 +352,14 @@ export function AdminPage() {
               </div>
             </div>
           </div>
+          <div className="side-actions">
+            <Link to="/" className="btn btn-ghost">
+              Portail public
+            </Link>
+            <button type="button" className="btn btn-ghost" onClick={signOut}>
+              {mode === 'token' ? 'Verrouiller' : 'Déconnexion'}
+            </button>
+          </div>
 
           {err ? <p className="alert error">{err}</p> : null}
           {msg ? <p className="alert success">{msg}</p> : null}
@@ -314,13 +378,6 @@ export function AdminPage() {
               onClick={() => setTab('qg')}
             >
               Admins QG
-            </button>
-            <button
-              type="button"
-              className={tab === 'reparation' ? 'chip on' : 'chip'}
-              onClick={() => setTab('reparation')}
-            >
-              Agents réparation
             </button>
           </div>
 
@@ -398,62 +455,12 @@ export function AdminPage() {
             </>
           ) : null}
 
-          {tab === 'reparation' ? (
-            <>
-              <RepairAgentForm
-                depots={zones.filter((z) => z.type === 'DEPOT_REPARATION')}
-                onCreate={async (body) => {
-                  try {
-                    setErr(null);
-                    await api.adminCreateRepairAgent(body, adminOpts);
-                    setMsg(`Agent ${body.email} créé.`);
-                    await runRefresh();
-                  } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
-                  }
-                }}
-              />
-              <RepairAgentList
-                agents={repairs}
-                zones={zones}
-                onSuspend={async (a) => {
-                  try {
-                    setErr(null);
-                    await api.adminSuspendRepairAgent(a.id, adminOpts);
-                    setMsg(`${a.email} suspendu.`);
-                    await runRefresh();
-                  } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
-                  }
-                }}
-                onReactivate={async (a) => {
-                  try {
-                    setErr(null);
-                    await api.adminReactivateRepairAgent(a.id, adminOpts);
-                    setMsg(`${a.email} réactivé.`);
-                    await runRefresh();
-                  } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
-                  }
-                }}
-                onDelete={async (a) => {
-                  if (!confirm(`Supprimer ${a.email} ?`)) return;
-                  try {
-                    setErr(null);
-                    await api.adminDeleteRepairAgent(a.id, adminOpts);
-                    setMsg(`${a.email} supprimé.`);
-                    await runRefresh();
-                  } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
-                  }
-                }}
-              />
-            </>
-          ) : null}
         </aside>
 
         <section className="panel map-panel">
           <PolygonPicker
+            zones={zones}
+            editingZoneId={draft.id}
             vertices={draft.vertices}
             onChange={(vertices) => setDraft({ ...draft, vertices })}
           />
@@ -782,217 +789,14 @@ function QgAdminList({ admins, zones }: { admins: AdminQg[]; zones: Zone[] }) {
   );
 }
 
-function RepairAgentForm({
-  depots,
-  onCreate,
-}: {
-  depots: Zone[];
-  onCreate: (body: {
-    zoneId: string;
-    nom: string;
-    prenom: string;
-    email: string;
-    password: string;
-    numeroTelephone: string;
-    matricule?: string | null;
-    specialite: Specialite;
-  }) => Promise<void> | void;
-}) {
-  const [nom, setNom] = useState('');
-  const [prenom, setPrenom] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [zoneId, setZoneId] = useState<string>('');
-  const [numeroTelephone, setNumeroTelephone] = useState('');
-  const [matricule, setMatricule] = useState('');
-  const [specialite, setSpecialite] = useState<Specialite>('ROUTE');
-
-  return (
-    <section className="form">
-      <h3>Créer un agent de réparation</h3>
-      {depots.length === 0 ? (
-        <p className="muted small">
-          Créez d'abord un <strong>dépôt de réparation</strong> (onglet Zones & dépôts)
-          avant d'y rattacher un agent.
-        </p>
-      ) : (
-        <>
-          <label>
-            Dépôt de rattachement
-            <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} required>
-              <option value="">— choisir —</option>
-              {depots.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.nom} ({z.code})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Spécialité
-            <select value={specialite} onChange={(e) => setSpecialite(e.target.value as Specialite)}>
-              {SPECIALITE_OPTIONS.map((s) => (
-                <option key={s.v} value={s.v}>
-                  {s.l}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nom
-            <input required value={nom} onChange={(e) => setNom(e.target.value)} />
-          </label>
-          <label>
-            Prénom
-            <input required value={prenom} onChange={(e) => setPrenom(e.target.value)} />
-          </label>
-          <label>
-            Email
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <label>
-            Mot de passe initial (≥ 8 caractères)
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <label>
-            Téléphone
-            <input
-              required
-              value={numeroTelephone}
-              onChange={(e) => setNumeroTelephone(e.target.value)}
-              placeholder="+261 …"
-            />
-          </label>
-          <label>
-            Matricule (optionnel)
-            <input value={matricule} onChange={(e) => setMatricule(e.target.value)} />
-          </label>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={async () => {
-              if (!zoneId) return;
-              await onCreate({
-                zoneId,
-                nom: nom.trim(),
-                prenom: prenom.trim(),
-                email: email.trim(),
-                password,
-                numeroTelephone: numeroTelephone.trim(),
-                matricule: matricule.trim() || null,
-                specialite,
-              });
-              setNom('');
-              setPrenom('');
-              setEmail('');
-              setPassword('');
-              setZoneId('');
-              setNumeroTelephone('');
-              setMatricule('');
-              setSpecialite('ROUTE');
-            }}
-          >
-            Créer l'agent
-          </button>
-        </>
-      )}
-    </section>
-  );
-}
-
-function RepairAgentList({
-  agents,
-  zones,
-  onSuspend,
-  onReactivate,
-  onDelete,
-}: {
-  agents: RepairAgent[];
-  zones: Zone[];
-  onSuspend: (a: RepairAgent) => void;
-  onReactivate: (a: RepairAgent) => void;
-  onDelete: (a: RepairAgent) => void;
-}) {
-  const zoneById = useMemo(() => Object.fromEntries(zones.map((z) => [z.id, z])), [zones]);
-  const [filter, setFilter] = useState<'ALL' | Specialite>('ALL');
-  const list = agents.filter((a) => filter === 'ALL' || a.specialite === filter);
-  return (
-    <section className="kanban">
-      <h3>Agents de réparation ({agents.length})</h3>
-      <div className="chips" style={{ marginBottom: 6 }}>
-        <button
-          type="button"
-          className={filter === 'ALL' ? 'chip on' : 'chip'}
-          onClick={() => setFilter('ALL')}
-        >
-          Tous
-        </button>
-        {SPECIALITE_OPTIONS.map((s) => (
-          <button
-            key={s.v}
-            type="button"
-            className={filter === s.v ? 'chip on' : 'chip'}
-            onClick={() => setFilter(s.v)}
-          >
-            {s.l}
-          </button>
-        ))}
-      </div>
-      {list.length === 0 ? (
-        <p className="muted small">Aucun agent pour ce filtre.</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {list.map((a) => (
-            <li key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid #eee' }}>
-              <div style={{ fontWeight: 600 }}>
-                {a.prenom} {a.nom} {a.actif ? '' : '· SUSPENDU'}
-              </div>
-              <div className="muted small">
-                {a.email} · {a.specialite}
-                {' · '}
-                {a.zoneId ? zoneById[a.zoneId]?.nom || a.zoneId : '—'}
-                {a.numeroTelephone ? ` · ${a.numeroTelephone}` : ''}
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                {a.actif ? (
-                  <button type="button" className="btn btn-ghost small" onClick={() => onSuspend(a)}>
-                    Suspendre
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-primary small"
-                    onClick={() => onReactivate(a)}
-                  >
-                    Réactiver
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-ghost small"
-                  onClick={() => onDelete(a)}
-                >
-                  Supprimer
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 function PolygonPicker({
+  zones,
+  editingZoneId,
   vertices,
   onChange,
 }: {
+  zones: Zone[];
+  editingZoneId?: string;
   vertices: { lat: number; lng: number }[];
   onChange: (v: { lat: number; lng: number }[]) => void;
 }) {
@@ -1000,6 +804,9 @@ function PolygonPicker({
   const [center, setCenter] = useState<{ lat: number; lng: number }>(TANA);
   const [pickedCenter, setPickedCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmedCenter, setConfirmedCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [regionFilter, setRegionFilter] = useState<'ALL' | RegionName>('ALL');
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (!apiKey) {
     return (
@@ -1047,6 +854,75 @@ function PolygonPicker({
     () => (vertices.length >= 3 ? [vertices] : []),
     [vertices],
   );
+  const zonePolygons = useMemo(
+    () =>
+      zones
+        .map((z) => {
+          const zoneVertices = geoJsonToVertices(z.geometrie);
+          return {
+            id: z.id,
+            paths: zoneVertices.length >= 3 ? [zoneVertices] : [],
+          };
+        })
+        .filter((z) => z.paths.length > 0),
+    [zones],
+  );
+  const communeZones = useMemo(
+    () =>
+      zones
+        .filter((z) => z.type === 'ARRONDISSEMENT')
+        .map((z) => {
+          const zoneVertices = geoJsonToVertices(z.geometrie);
+          return {
+            id: z.id,
+            nom: z.nom,
+            region: inferRegionFromVertices(zoneVertices),
+            vertices: zoneVertices,
+          };
+        })
+        .filter((z) => z.vertices.length >= 3)
+        .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    [zones],
+  );
+  const filteredCommunes = useMemo(
+    () => {
+      const query = normalizeText(searchQuery);
+      return communeZones.filter((z) => {
+        if (regionFilter !== 'ALL' && z.region !== regionFilter) return false;
+        if (!query) return true;
+        const nom = normalizeText(z.nom);
+        if (nom.includes(query)) return true;
+        const regionAliases = REGION_ALIASES[z.region];
+        return regionAliases.some((alias) => alias.includes(query) || query.includes(alias));
+      });
+    },
+    [communeZones, regionFilter, searchQuery],
+  );
+  const selectedZoneVertices = useMemo(
+    () => filteredCommunes.find((z) => z.id === selectedZoneId)?.vertices ?? null,
+    [filteredCommunes, selectedZoneId],
+  );
+
+  useEffect(() => {
+    if (!selectedZoneId) return;
+    if (filteredCommunes.some((z) => z.id === selectedZoneId)) return;
+    setSelectedZoneId('');
+  }, [filteredCommunes, selectedZoneId]);
+  useEffect(() => {
+    const query = normalizeText(searchQuery);
+    if (!query) return;
+    const matchedRegion = (Object.entries(REGION_ALIASES) as [RegionName, string[]][])
+      .find(([, aliases]) => aliases.some((alias) => query.includes(alias)));
+    if (matchedRegion) setRegionFilter(matchedRegion[0]);
+  }, [searchQuery]);
+  useEffect(() => {
+    if (!selectedZoneId) return;
+    const selected = communeZones.find((z) => z.id === selectedZoneId);
+    if (!selected) return;
+    setSearchQuery(selected.nom);
+    setRegionFilter(selected.region);
+  }, [selectedZoneId, communeZones]);
+  const draftRegion = useMemo(() => inferRegionFromVertices(vertices), [vertices]);
 
   function pinIcon(fill: string): google.maps.Icon | undefined {
     if (typeof window === 'undefined' || !window.google?.maps) return undefined;
@@ -1104,6 +980,69 @@ function PolygonPicker({
             <option value="hybrid">Hybride</option>
           </select>
         </label>
+        <div
+          style={{
+            marginLeft: 'auto',
+            marginRight: '8cm',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            Région
+            <select
+              value={regionFilter}
+              onChange={(e) => setRegionFilter(e.target.value as 'ALL' | RegionName)}
+              style={{ minWidth: 170 }}
+            >
+              <option value="ALL">Toutes les régions</option>
+              <option value="Antananarivo">Antananarivo</option>
+              <option value="Fianarantsoa">Fianarantsoa</option>
+              <option value="Toliara">Toliara</option>
+              <option value="Toamasina">Toamasina (Tamatave)</option>
+              <option value="Mahajanga">Mahajanga</option>
+              <option value="Antsiranana">Antsiranana</option>
+            </select>
+          </label>
+          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            Recherche
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Ex: tamatave"
+              list="commune-search-suggestions"
+              style={{ minWidth: 180 }}
+            />
+            <datalist id="commune-search-suggestions">
+              {communeZones.map((z) => (
+                <option key={`${z.id}-nom`} value={z.nom} />
+              ))}
+              {(Object.entries(REGION_ALIASES) as [RegionName, string[]][])
+                .flatMap(([, aliases]) => aliases)
+                .filter((alias, idx, arr) => arr.indexOf(alias) === idx)
+                .map((alias) => (
+                  <option key={`alias-${alias}`} value={alias} />
+                ))}
+            </datalist>
+          </label>
+          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            Commune
+            <select
+              value={selectedZoneId}
+              onChange={(e) => setSelectedZoneId(e.target.value)}
+              style={{ minWidth: 230 }}
+            >
+              <option value="">-- choisir une commune --</option>
+              {filteredCommunes.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.nom} ({REGION_LABELS[z.region]})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {stage === 'pick' ? (
           <button type="button" className="btn btn-primary" onClick={confirmLocation}>
             Confirmer cet emplacement
@@ -1139,6 +1078,11 @@ function PolygonPicker({
             l'ordre (comme une polyligne). Le contour se ferme automatiquement entre le
             dernier et le premier point.
           </p>
+          {vertices.length >= 3 ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              Région détectée automatiquement: <strong>{REGION_LABELS[draftRegion]}</strong>
+            </p>
+          ) : null}
         </div>
       )}
       <div
@@ -1155,12 +1099,28 @@ function PolygonPicker({
         <Map
           defaultCenter={TANA}
           defaultZoom={12}
+          minZoom={5.8}
+          restriction={{ latLngBounds: MADAGASCAR_BOUNDS, strictBounds: true }}
           mapTypeId={mapTypeId}
           gestureHandling="greedy"
           onCameraChanged={(ev: MapCameraChangedEvent) => setCenter(ev.detail.center)}
           onClick={addVertexFromClick}
           style={{ width: '100%', height: '100%' }}
         >
+          <SelectedCommuneFocus vertices={selectedZoneVertices} />
+          {zonePolygons.map((zone) => (
+            <Polygon
+              key={zone.id}
+              paths={zone.paths}
+              strokeColor="#0f766e"
+              strokeOpacity={zone.id === editingZoneId ? 0.95 : 0.7}
+              strokeWeight={zone.id === editingZoneId ? 3 : 2}
+              fillColor="#14b8a6"
+              fillOpacity={zone.id === editingZoneId ? 0.18 : 0.1}
+              clickable={false}
+              zIndex={0}
+            />
+          ))}
           {polygonPaths.length > 0 ? (
             <Polygon
               paths={polygonPaths}
@@ -1244,4 +1204,21 @@ function PolygonPicker({
       </div>
     </div>
   );
+}
+
+function SelectedCommuneFocus({
+  vertices,
+}: {
+  vertices: { lat: number; lng: number }[] | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !vertices || vertices.length < 3 || typeof window === 'undefined' || !window.google?.maps) return;
+    const bounds = new window.google.maps.LatLngBounds();
+    for (const v of vertices) bounds.extend(v);
+    if (!bounds.isEmpty()) map.fitBounds(bounds, 80);
+  }, [map, vertices]);
+
+  return null;
 }

@@ -279,8 +279,6 @@ export const api = {
     }),
 
   /* =========================== CDC v2.3 — QG ========================== */
-  /* Le QG ne gère plus que des AGENT_PATROUILLE (les équipes sont créées
-     par le super-admin, cf. adminListRepairAgents ci-dessus). */
 
   qgAgents: () => request<{ agents: Agent[] }>('/api/qg/agents'),
 
@@ -314,4 +312,25 @@ export const api = {
 
   qgDeletePatrouille: (id: string) =>
     request<{ ok: boolean }>(`/api/qg/agents/${id}`, { method: 'DELETE' }),
+
+  qgRepairAgents: () => request<{ agents: RepairAgent[] }>('/api/qg/repair-agents'),
+
+  qgCreateRepairAgent: (body: {
+    nom: string;
+    prenom: string;
+    email: string;
+    password: string;
+    numeroTelephone: string;
+    matricule?: string | null;
+    specialite: Specialite;
+  }) => request<{ agent: RepairAgent }>('/api/qg/repair-agents', { method: 'POST', json: body }),
+
+  qgSuspendRepairAgent: (id: string) =>
+    request<{ agent: RepairAgent }>(`/api/qg/repair-agents/${id}/suspendre`, { method: 'PATCH' }),
+
+  qgReactivateRepairAgent: (id: string) =>
+    request<{ agent: RepairAgent }>(`/api/qg/repair-agents/${id}/reactiver`, { method: 'PATCH' }),
+
+  qgDeleteRepairAgent: (id: string) =>
+    request<{ ok: boolean }>(`/api/qg/repair-agents/${id}`, { method: 'DELETE' }),
 };

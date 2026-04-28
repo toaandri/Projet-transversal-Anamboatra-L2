@@ -2139,6 +2139,18 @@ textarea {
   line-height: 1.2;
 }
 
+.dashboard .side-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.dashboard .side-actions .btn {
+  flex: 1 1 140px;
+  justify-content: center;
+}
+
 /* Forcer un thème clair (white mode) à l'intérieur du panneau overlay et de toute bulle */
 .dashboard .side,
 .bubble-card {

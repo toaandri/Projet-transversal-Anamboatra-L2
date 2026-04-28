@@ -200,7 +200,7 @@ export function DashboardPage() {
     });
   }
 
-  const isTerrain = role === 'ADMIN_QG' || role === 'AGENT_PATROUILLE' || role === 'EQUIPE_INTERVENTION';
+  const isTerrain = role === 'ADMIN_QG' || user?.role === 'AGENT_PATROUILLE' || user?.role === 'EQUIPE_INTERVENTION';
 
   return (
     <div className="page dashboard">
@@ -410,7 +410,7 @@ export function DashboardPage() {
             );
           })()}
 
-          {role === 'AGENT_PATROUILLE' || role === 'EQUIPE_INTERVENTION' ? (
+          {user?.role === 'AGENT_PATROUILLE' || user?.role === 'EQUIPE_INTERVENTION' ? (
             <section className="qg-section">
               <header className="qg-section-head">
                 <span className="qg-section-eyebrow">Terrain</span>
@@ -419,7 +419,7 @@ export function DashboardPage() {
                 </div>
               </header>
               <div className="qg-actions">
-                {role === 'AGENT_PATROUILLE' ? (
+                {user?.role === 'AGENT_PATROUILLE' ? (
                   <button
                     type="button"
                     className="btn btn-primary block"
@@ -582,7 +582,7 @@ export function DashboardPage() {
         </aside>
       </div>
 
-      {reportOpen && role === 'AGENT_PATROUILLE' ? (
+      {reportOpen && user?.role === 'AGENT_PATROUILLE' ? (
         <ReportModal
           onClose={() => {
             setReportOpen(false);

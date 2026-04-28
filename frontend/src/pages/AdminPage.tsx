@@ -17,7 +17,14 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { APIProvider, Map, Marker, type MapCameraChangedEvent } from '@vis.gl/react-google-maps';
+import {
+  APIProvider,
+  Map,
+  Marker,
+  Polygon,
+  type MapCameraChangedEvent,
+  type MapMouseEvent,
+} from '@vis.gl/react-google-maps';
 import { api, getAdminToken, getToken, setAdminToken } from '../api';
 import { useAuth } from '../useAuth';
 import type {
@@ -84,68 +91,6 @@ function geoJsonToVertices(g: unknown): { lat: number; lng: number }[] {
   const cleaned =
     first.length > 1 && last?.[0] === head?.[0] && last?.[1] === head?.[1] ? first.slice(0, -1) : first;
   return cleaned.map(([lng, lat]) => ({ lat, lng }));
-}
-
-function toRad(v: number): number {
-  return (v * Math.PI) / 180;
-}
-
-function toDeg(v: number): number {
-  return (v * 180) / Math.PI;
-}
-
-function destinationPoint(
-  center: { lat: number; lng: number },
-  bearingDeg: number,
-  distanceMeters: number,
-): { lat: number; lng: number } {
-  const R = 6371000;
-  const brng = toRad(bearingDeg);
-  const lat1 = toRad(center.lat);
-  const lon1 = toRad(center.lng);
-  const angDist = distanceMeters / R;
-
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(angDist) +
-      Math.cos(lat1) * Math.sin(angDist) * Math.cos(brng),
-  );
-  const lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(brng) * Math.sin(angDist) * Math.cos(lat1),
-      Math.cos(angDist) - Math.sin(lat1) * Math.sin(lat2),
-    );
-
-  return { lat: toDeg(lat2), lng: toDeg(lon2) };
-}
-
-function distanceMeters(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
-  const R = 6371000;
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const x =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-  return R * c;
-}
-
-function buildCircleVertices(
-  center: { lat: number; lng: number },
-  radiusMeters: number,
-  points = 20,
-): { lat: number; lng: number }[] {
-  const safePoints = Math.max(8, points);
-  const out: { lat: number; lng: number }[] = [];
-  for (let i = 0; i < safePoints; i += 1) {
-    out.push(destinationPoint(center, (i * 360) / safePoints, radiusMeters));
-  }
-  return out;
 }
 
 export function AdminPage() {
@@ -1053,8 +998,8 @@ function PolygonPicker({
 }) {
   const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'terrain' | 'satellite' | 'hybrid'>('terrain');
   const [center, setCenter] = useState<{ lat: number; lng: number }>(TANA);
+  const [pickedCenter, setPickedCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmedCenter, setConfirmedCenter] = useState<{ lat: number; lng: number } | null>(null);
-  const [baseRadiusM, setBaseRadiusM] = useState<number>(1200);
 
   if (!apiKey) {
     return (
@@ -1084,34 +1029,53 @@ function PolygonPicker({
     );
   }
 
-  function addVertexAtCenter() {
-    onChange([...vertices, { lat: center.lat, lng: center.lng }]);
-  }
-
   const stage = confirmedCenter ? 'delimit' : 'pick';
 
   function confirmLocation() {
-    const c = { lat: center.lat, lng: center.lng };
+    const c = pickedCenter || { lat: center.lat, lng: center.lng };
     setConfirmedCenter(c);
-    // Base par défaut = cercle. L'admin peut ensuite affiner les limites.
-    onChange(buildCircleVertices(c, baseRadiusM, 20));
+    onChange([]);
   }
 
   function resetLocation() {
+    setPickedCenter(null);
     setConfirmedCenter(null);
     onChange([]);
   }
 
-  function regenerateCircle() {
-    if (!confirmedCenter) return;
-    onChange(buildCircleVertices(confirmedCenter, baseRadiusM, 20));
+  const polygonPaths = useMemo(
+    () => (vertices.length >= 3 ? [vertices] : []),
+    [vertices],
+  );
+
+  function pinIcon(fill: string): google.maps.Icon | undefined {
+    if (typeof window === 'undefined' || !window.google?.maps) return undefined;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">
+  <path d="M17 2.5C10.1 2.5 4.5 8.1 4.5 15c0 9.4 10.6 20 12.1 21.7a.7.7 0 0 0 1 0C19.1 35 29.5 24.4 29.5 15 29.5 8.1 23.9 2.5 17 2.5Z"
+    fill="${fill}" stroke="#ffffff" stroke-width="2.6"/>
+  <circle cx="17" cy="15" r="6.6" fill="#ffffff" stroke="#0f172a" stroke-opacity="0.2" stroke-width="1"/>
+</svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new window.google.maps.Size(34, 44),
+      anchor: new window.google.maps.Point(17, 41),
+      labelOrigin: new window.google.maps.Point(17, 15),
+    };
   }
 
-  const adaptiveRadiusM = useMemo(() => {
-    if (!confirmedCenter || vertices.length === 0) return baseRadiusM;
-    const maxD = Math.max(...vertices.map((v) => distanceMeters(confirmedCenter, v)));
-    return Math.max(baseRadiusM, Math.round(maxD));
-  }, [confirmedCenter, vertices, baseRadiusM]);
+  const vertexIcon = useMemo(() => pinIcon('#0ea5e9'), []);
+  const centerIcon = useMemo(() => pinIcon('#1a73e8'), []);
+
+  function addVertexFromClick(e: MapMouseEvent) {
+    const ll = e.detail.latLng;
+    if (!ll) return;
+    if (!confirmedCenter) {
+      setPickedCenter({ lat: ll.lat, lng: ll.lng });
+      return;
+    }
+    onChange([...vertices, { lat: ll.lat, lng: ll.lng }]);
+  }
 
   return (
     <div
@@ -1146,8 +1110,8 @@ function PolygonPicker({
           </button>
         ) : (
           <>
-            <button type="button" className="btn btn-primary" onClick={addVertexAtCenter}>
-              Ajouter sommet au centre
+            <button type="button" className="btn btn-primary" disabled>
+              Cliquez sur la carte pour tracer
             </button>
             <button
               type="button"
@@ -1166,35 +1130,19 @@ function PolygonPicker({
 
       {stage === 'pick' ? (
         <p className="muted small" style={{ margin: 0 }}>
-          Étape 1/2: déplacez la carte pour mettre le centre sur la commune, puis confirmez l'emplacement.
+          Étape 1/2: cliquez sur la carte pour choisir l'emplacement de la commune, puis confirmez.
         </p>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
           <p className="muted small" style={{ margin: 0 }}>
-            Étape 2/2: délimitez la zone (Sud/Est/Ouest...) en déplaçant la carte puis
-            « Ajouter sommet au centre ».
+            Étape 2/2: tracez la délimitation en cliquant les sommets sur la carte, dans
+            l'ordre (comme une polyligne). Le contour se ferme automatiquement entre le
+            dernier et le premier point.
           </p>
-          <div className="row">
-            <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              Cercle de base (m)
-              <input
-                type="range"
-                min={300}
-                max={8000}
-                step={100}
-                value={baseRadiusM}
-                onChange={(e) => setBaseRadiusM(Number(e.target.value))}
-              />
-              <span>{baseRadiusM} m</span>
-            </label>
-            <button type="button" className="btn btn-ghost" onClick={regenerateCircle}>
-              Réappliquer cercle
-            </button>
-          </div>
         </div>
       )}
       <div
-        className="map-wrap"
+        className={`map-wrap admin-zone-picker${stage === 'delimit' ? ' draw-mode' : ''}`}
         style={{
           flex: '1 1 auto',
           minHeight: 320,
@@ -1210,19 +1158,41 @@ function PolygonPicker({
           mapTypeId={mapTypeId}
           gestureHandling="greedy"
           onCameraChanged={(ev: MapCameraChangedEvent) => setCenter(ev.detail.center)}
+          onClick={addVertexFromClick}
           style={{ width: '100%', height: '100%' }}
         >
+          {polygonPaths.length > 0 ? (
+            <Polygon
+              paths={polygonPaths}
+              strokeColor="#007e3a"
+              strokeOpacity={0.95}
+              strokeWeight={3}
+              fillColor="#007e3a"
+              fillOpacity={0.22}
+              clickable={false}
+              zIndex={1}
+            />
+          ) : null}
           {vertices.map((v, i) => (
             <Marker
               key={`${i}-${v.lat}-${v.lng}`}
               position={v}
-              label={{ text: String(i + 1), color: 'white', fontSize: '12px', fontWeight: '600' }}
+              icon={vertexIcon}
+              label={{ text: String(i + 1), color: '#0f172a', fontSize: '12px', fontWeight: '700' }}
             />
           ))}
           {confirmedCenter ? (
             <Marker
               position={confirmedCenter}
               title="Centre commune confirmé"
+              icon={centerIcon}
+              label={{ text: 'C', color: 'white', fontSize: '12px', fontWeight: '700' }}
+            />
+          ) : pickedCenter ? (
+            <Marker
+              position={pickedCenter}
+              title="Centre choisi (non confirmé)"
+              icon={centerIcon}
               label={{ text: 'C', color: 'white', fontSize: '12px', fontWeight: '700' }}
             />
           ) : null}
@@ -1238,16 +1208,6 @@ function PolygonPicker({
             placeItems: 'center',
           }}
         >
-          <div
-            style={{
-              width: Math.max(140, Math.min(320, adaptiveRadiusM / 8)),
-              height: Math.max(140, Math.min(320, adaptiveRadiusM / 8)),
-              borderRadius: '50%',
-              border: '2px solid rgba(26, 115, 232, 0.7)',
-              background: 'rgba(26, 115, 232, 0.12)',
-              boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.18) inset',
-            }}
-          />
           <div
             style={{
               position: 'absolute',
@@ -1275,8 +1235,10 @@ function PolygonPicker({
             }}
           >
             {stage === 'pick'
-              ? "Placez le centre puis confirmez l'emplacement"
-              : `Délimitation en cours • rayon guide ≈ ${adaptiveRadiusM} m`}
+              ? (pickedCenter
+                ? "Centre choisi - cliquez sur Confirmer cet emplacement"
+                : 'Cliquez sur la carte pour choisir le centre')
+              : `Délimitation en cours • ${vertices.length} sommet${vertices.length > 1 ? 's' : ''}`}
           </div>
         </div>
       </div>

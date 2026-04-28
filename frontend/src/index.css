@@ -2040,6 +2040,13 @@ textarea {
   overflow: hidden;
 }
 
+/* Mode tracage zone (admin): curseur croix + plus, style AutoCAD-like */
+.dashboard .map-wrap.admin-zone-picker.draw-mode,
+.dashboard .map-wrap.admin-zone-picker.draw-mode .gm-style,
+.dashboard .map-wrap.admin-zone-picker.draw-mode .gm-style div {
+  cursor: crosshair !important;
+}
+
 /* Panneau Google Maps : flotte à GAUCHE, du haut au bas, blanc, ombre douce */
 .dashboard .side {
   position: absolute;

@@ -178,7 +178,7 @@ export function MapView({
           defaultCenter={TANA}
           defaultZoom={12}
           mapId={mapId}
-          defaultMapTypeId="hybrid"
+          mapTypeId="hybrid"
           styles={mapId ? undefined : ANAMBOATRA_MAP_STYLE}
           gestureHandling="greedy"
           disableDefaultUI={false}

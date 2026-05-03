@@ -29,6 +29,12 @@
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 a {
@@ -1710,13 +1716,15 @@ code {
   }
 }
 
-/* Mode "Google Maps" — la page est un canevas plein écran */
+/* Mode "Google Maps" — carte + centre de contrôle sur un seul écran (grille) */
 .page.dashboard {
-  height: 100vh;
-  min-height: 100vh;
-  overflow: hidden;
   position: relative;
-  display: block;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Le topbar standard est caché : son contenu est repris dans le panneau
@@ -1998,46 +2006,177 @@ textarea {
 }
 
 /* ------------------------------------------------------------------ */
-/* Map-first layout (Google Maps-like)                                */
+/* Dashboard : carte + centre de contrôle — même écran, grille unifiée  */
 /* ------------------------------------------------------------------ */
 .dashboard .dash-grid {
-  position: absolute;
-  inset: 0;
-  display: block;
-  --dash-side-width: clamp(320px, 32vw, 380px);
-  --dash-gap: 14px;
+  --dash-pad: 12px;
+  --dash-gap: 12px;
+  --side-w: clamp(280px, 28vw, 380px);
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: var(--dash-gap);
+  row-gap: 0;
+  padding: var(--dash-pad);
+  box-sizing: border-box;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.dashboard .dash-grid.side-closed {
+  --side-w: 0px;
+  column-gap: 0;
+}
+
+/* Panneau seul : pas de carte (QG / super-admin) */
+.dashboard .dash-grid.map-hidden {
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 0;
+}
+
+.dashboard .dash-grid.map-hidden .map-panel {
+  display: none !important;
+}
+
+.dashboard .dash-grid.map-hidden:not(.side-closed) .side {
+  grid-column: 1 / -1;
+}
+
+.dashboard .dash-grid.map-hidden:not(.side-closed) .side-toggle {
+  left: auto;
+  right: var(--dash-pad);
+  border-left: 1px solid rgba(0, 126, 58, 0.2);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -2px 4px 14px rgba(15, 30, 22, 0.12);
+}
+
+.dashboard .dash-grid.map-hidden.side-closed .side-toggle {
+  left: var(--dash-pad);
+  right: auto;
+  border-left: 0;
+  border-right: 1px solid rgba(0, 126, 58, 0.2);
+  border-radius: 0 10px 10px 0;
+  box-shadow: 2px 4px 14px rgba(15, 30, 22, 0.12);
+}
+
+.dashboard .side {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  background: #ffffff;
+  color: #202124;
+  border: 1px solid rgba(0, 126, 58, 0.16);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 22px rgba(15, 30, 22, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  padding: 1rem 1.05rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 5;
+  transition: opacity 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.dashboard .dash-grid.side-closed .side {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
   padding: 0;
-  gap: 0;
+  margin: 0;
+  border-width: 0;
+  box-shadow: none;
+}
+
+.dashboard .map-panel {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: 1px solid rgba(0, 126, 58, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(165deg, #ffffff 0%, #f4faf7 55%, #eef6f0 100%);
+  box-shadow:
+    0 6px 26px rgba(0, 126, 58, 0.11),
+    0 0 0 1px rgba(255, 255, 255, 0.75) inset;
   overflow: hidden;
 }
 
-/* Carte = occupe l'espace restant à droite du panneau, change de taille quand le panneau s'ouvre/ferme */
-.dashboard .map-panel {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  position: absolute;
-  top: var(--dash-gap);
-  right: var(--dash-gap);
-  bottom: var(--dash-gap);
-  left: calc(var(--dash-side-width) + var(--dash-gap));
-  height: 100%;
-  transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1), top 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    right 0.28s cubic-bezier(0.4, 0, 0.2, 1), bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+.dashboard .map-panel > p.muted {
+  flex: 0 0 auto;
+  padding: 8px 12px 0;
+  margin: 0;
 }
 
-.dashboard .dash-grid.side-closed .map-panel {
-  left: var(--dash-gap);
+.dashboard .map-panel .map-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dashboard .map-panel > *:not(.map-stats-overlay):not(.map-wrap):not(p.muted) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard .map-wrap {
-  height: 100%;
   width: 100%;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 126, 58, 0.22);
-  box-shadow: 0 12px 28px rgba(0, 126, 58, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
+  height: 100%;
+  border-radius: 14px;
+  border: none;
+  box-shadow: none;
   overflow: hidden;
+}
+
+/* Chevron entre panneau et carte */
+.dashboard .side-toggle {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  left: calc(var(--dash-pad) + var(--side-w) - 12px);
+  transform: translateY(-50%);
+  width: 24px;
+  height: 56px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 126, 58, 0.2);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 2px 4px 14px rgba(15, 30, 22, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #006c32;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease, color 0.15s ease;
+}
+
+.dashboard .dash-grid.side-closed .side-toggle {
+  left: var(--dash-pad);
+}
+
+.dashboard .side-toggle:hover {
+  background: #f1faf3;
+  color: #004d24;
 }
 
 /* Mode tracage zone (admin): curseur croix + plus, style AutoCAD-like */
@@ -2046,68 +2185,6 @@ textarea {
 .dashboard .map-wrap.admin-zone-picker.draw-mode .gm-style div {
   cursor: crosshair !important;
 }
-
-/* Panneau Google Maps : flotte à GAUCHE, du haut au bas, blanc, ombre douce */
-.dashboard .side {
-  position: absolute;
-  top: var(--dash-gap);
-  left: var(--dash-gap);
-  bottom: var(--dash-gap);
-  width: var(--dash-side-width);
-  max-width: calc(100% - 24px);
-  max-height: 100%;
-  background: #ffffff;
-  color: #202124;
-  border: none;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 2px 0 12px rgba(60, 64, 67, 0.18);
-  border-radius: 0 12px 12px 0;
-  padding: 1rem 1.1rem 1rem;
-  overflow-y: auto;
-  z-index: 15;
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Replié = glisse vers la gauche, hors écran */
-.dashboard .dash-grid.side-closed .side {
-  transform: translateX(-100%);
-}
-
-/* Chevron sur le bord droit du panneau, toujours visible */
-.dashboard .side-toggle {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: calc(var(--dash-side-width) + var(--dash-gap));
-  width: 24px;
-  height: 64px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-left: 0;
-  border-radius: 0 8px 8px 0;
-  box-shadow: 2px 2px 8px rgba(60, 64, 67, 0.20);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #5f6368;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-  z-index: 16;
-  transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
-  padding: 0;
-}
-
-.dashboard .side-toggle:hover {
-  background: #f1f3f4;
-  color: #202124;
-}
-
-.dashboard .dash-grid.side-closed .side-toggle {
-  left: var(--dash-gap);
-}
-
 /* En-tête à l'intérieur du panneau (brand + sous-titre) — remplace l'ancien topbar */
 .dashboard .side-header {
   display: flex;
@@ -2149,6 +2226,112 @@ textarea {
 .dashboard .side-actions .btn {
   flex: 1 1 140px;
   justify-content: center;
+}
+
+.dashboard .admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 0.7rem;
+}
+
+.dashboard .admin-kpi-card {
+  background: #f8fcfa;
+  border: 1px solid rgba(0, 126, 58, 0.14);
+  border-radius: 10px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.dashboard .admin-kpi-card-wide {
+  grid-column: span 4;
+}
+
+.dashboard .admin-kpi-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7a73;
+}
+
+.dashboard .admin-kpi-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0e2a14;
+}
+
+.dashboard .admin-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf2ef;
+  gap: 8px;
+}
+
+.dashboard .admin-list-item-main {
+  min-width: 0;
+}
+
+.dashboard .admin-list-item-title {
+  font-weight: 700;
+  color: #0e2a14;
+}
+
+.dashboard .admin-list-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard .admin-form-intro {
+  margin: -2px 0 10px;
+}
+
+.dashboard .admin-zone-vertices {
+  background: #f8fcfa;
+  border: 1px dashed rgba(0, 126, 58, 0.2);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.dashboard .admin-form-actions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.dashboard .admin-form-actions .btn {
+  min-width: 130px;
+}
+
+.dashboard .admin-map-filters {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dashboard .admin-qg-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dashboard .admin-qg-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #edf2ef;
+}
+
+.dashboard .admin-qg-item-title {
+  font-weight: 700;
+  color: #0e2a14;
 }
 
 /* Forcer un thème clair (white mode) à l'intérieur du panneau overlay et de toute bulle */
@@ -2264,10 +2447,13 @@ textarea {
     height: auto;
     min-height: auto;
     overflow: visible;
+    grid-template-columns: 1fr;
   }
 
   .dashboard .side {
     position: static;
+    grid-column: auto;
+    grid-row: auto;
     transform: none;
     width: auto;
     max-width: none;
@@ -2277,6 +2463,9 @@ textarea {
     border-radius: 12px;
     box-shadow: none;
     order: 1;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .dashboard .dash-grid.side-closed .side {
@@ -2285,6 +2474,9 @@ textarea {
     padding: 0;
     border: none;
     overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .dashboard .side-toggle {
@@ -2298,6 +2490,8 @@ textarea {
   .dashboard .map-panel,
   .dashboard .dash-grid.side-closed .map-panel {
     position: static;
+    grid-column: auto;
+    grid-row: auto;
     inset: auto;
     left: auto;
     right: auto;
@@ -2316,6 +2510,11 @@ textarea {
   .dashboard .map-wrap {
     border-radius: 12px;
     height: min(64vh, 620px);
+  }
+
+  .dashboard .admin-map-filters {
+    margin-left: 0;
+    width: 100%;
   }
 
   .topbar {
@@ -2337,6 +2536,155 @@ textarea {
   .nav .btn {
     padding: 0.35rem 0.55rem;
     font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .dashboard .admin-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard .admin-kpi-card-wide {
+    grid-column: span 2;
+  }
+
+  .dashboard .admin-form-actions {
+    justify-content: stretch;
+  }
+
+  .dashboard .admin-form-actions .btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* ------------------------------------------------------------
+   Portrait 9:16 support (mobile/tablette en vertical):
+   tout l'IHM admin reste atteignable sans élément masqué.
+   ------------------------------------------------------------ */
+@media (max-aspect-ratio: 9/16) {
+  .page.dashboard {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page.dashboard > .topbar {
+    display: flex;
+  }
+
+  .dashboard .dash-grid {
+    position: static;
+    inset: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.6rem;
+    flex: 1;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard .side-toggle {
+    display: none;
+  }
+
+  .dashboard .side {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    min-height: 0;
+    transform: none;
+    overflow: visible;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: none;
+    order: 1;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .dashboard .dash-grid.side-closed .side {
+    transform: none;
+    height: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .dashboard .side-header {
+    display: flex;
+  }
+
+  .dashboard .map-panel,
+  .dashboard .dash-grid.side-closed .map-panel {
+    position: static;
+    inset: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: auto;
+    height: auto;
+    grid-column: auto;
+    grid-row: auto;
+    border: 1px solid rgba(0, 126, 58, 0.22);
+    border-radius: 16px;
+    padding: 0.5rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%);
+    transition: none;
+    order: 2;
+  }
+
+  .dashboard .map-wrap {
+    border-radius: 12px;
+    height: 52vh;
+    min-height: 320px;
+    max-height: 560px;
+  }
+
+  .dashboard .admin-map-filters {
+    margin-left: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dashboard .admin-map-filters label {
+    width: 100%;
+  }
+
+  .dashboard .admin-map-filters input,
+  .dashboard .admin-map-filters select {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .dashboard .row {
+    align-items: stretch;
+  }
+
+  .dashboard .row > .btn {
+    flex: 1 1 100%;
+  }
+
+  .dashboard .admin-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard .admin-kpi-card-wide {
+    grid-column: span 2;
   }
 }
 

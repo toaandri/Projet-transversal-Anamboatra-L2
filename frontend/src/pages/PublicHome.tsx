@@ -152,17 +152,6 @@ export function PublicHome() {
           {sideOpen ? '\u2039' : '\u203a'}
         </button>
 
-        <section className="panel map-panel">
-          <MapView
-            geojson={features}
-            viewerRole={null}
-            height="100%"
-            pickMode={pick}
-            onPickLatLng={(la, ln) => { setLat(la); setLng(ln); }}
-          />
-        </section>
-
-        {/* ---- Panneau lateral harmonise avec le mobile ---- */}
         <aside className="panel side" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}>
 
           {/* En-tete identite */}
@@ -339,6 +328,16 @@ export function PublicHome() {
             </form>
           </div>
         </aside>
+
+        <section className="panel map-panel">
+          <MapView
+            geojson={features}
+            viewerRole={null}
+            height="100%"
+            pickMode={pick}
+            onPickLatLng={(la, ln) => { setLat(la); setLng(ln); }}
+          />
+        </section>
       </div>
     </div>
   );

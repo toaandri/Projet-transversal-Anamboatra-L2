@@ -6,14 +6,13 @@
  * propose le formulaire jeton.
  *
  * Sections :
- *   - Zones : arrondissements / communes / routes nationales + DÉPÔTS de
- *     réparation (garages des équipes d'intervention), tous tracés sur la carte.
- *   - Admins QG : création des comptes ADMIN_QG rattachés à une commune.
- *   - Agents de réparation : création / suspension / reset device des
- *     EQUIPE_INTERVENTION rattachées à un dépôt, avec spécialité (ROUTE /
- *     JIRAMA / MACON / NETTOYEUR).
+ *   - Territoires gérés ici : arrondissements (communes) et routes nationales
+ *     uniquement — pas de création ni d'édition des dépôts (référentiel possible
+ *     en base, tracé sur la carte en lecture seule dans la liste).
+ *   - Admins QG : création des comptes ADMIN_QG rattachés à une commune ou un axe.
  *
- * Les AGENT_PATROUILLE sont enrôlés par chaque Admin QG depuis son dashboard.
+ * Dépôts et équipes d'intervention : gérés au niveau des ADMIN_QG (Cf. dashboard
+ * communal). Les AGENT_PATROUILLE sont enrôlés par chaque Admin QG.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -54,10 +53,15 @@ const ZONE_TYPE_LABEL: Record<TypeZone, string> = {
   DEPOT_REPARATION: 'Dépôt de réparation',
 };
 
+/** Types de zone que la console super-admin peut créer ou modifier. */
+type SuperAdminZoneType = 'ARRONDISSEMENT' | 'ROUTE_NATIONALE';
+
+const SUPER_ADMIN_ZONE_TYPES: SuperAdminZoneType[] = ['ARRONDISSEMENT', 'ROUTE_NATIONALE'];
+
 type ZoneDraft = {
   id?: string;
   nom: string;
-  type: TypeZone;
+  type: SuperAdminZoneType;
   code: string;
   numeroQg: string;
   vertices: { lat: number; lng: number }[];
@@ -173,10 +177,19 @@ export function AdminPage() {
 
   const [tab, setTab] = useState<Tab>('zones');
   const [sideOpen, setSideOpen] = useState(true);
+  const [mapVisible, setMapVisible] = useState(true);
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [admins, setAdmins] = useState<AdminQg[]>([]);
   const [draft, setDraft] = useState<ZoneDraft>(EMPTY_DRAFT);
+  const zoneCountByType = useMemo(
+    () => ({
+      all: zones.length,
+      arr: zones.filter((z) => z.type === 'ARRONDISSEMENT').length,
+      route: zones.filter((z) => z.type === 'ROUTE_NATIONALE').length,
+    }),
+    [zones],
+  );
 
   const adminOpts = useMemo(
     () => (mode === 'token' ? { adminToken: getAdminToken() } : {}),
@@ -321,6 +334,15 @@ export function AdminPage() {
           </div>
         </div>
         <nav className="nav">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setMapVisible((v) => !v)}
+            aria-pressed={!mapVisible}
+            title={mapVisible ? 'Masquer la carte (saisie et listes uniquement)' : 'Afficher la carte'}
+          >
+            {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+          </button>
           <Link to="/" className="btn btn-ghost">
             Portail public
           </Link>
@@ -330,7 +352,9 @@ export function AdminPage() {
         </nav>
       </header>
 
-      <div className={`dash-grid${sideOpen ? '' : ' side-closed'}`}>
+      <div
+        className={`dash-grid${sideOpen ? '' : ' side-closed'}${mapVisible ? '' : ' map-hidden'}`}
+      >
         <button
           type="button"
           className="side-toggle"
@@ -353,6 +377,14 @@ export function AdminPage() {
             </div>
           </div>
           <div className="side-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setMapVisible((v) => !v)}
+              aria-pressed={!mapVisible}
+            >
+              {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+            </button>
             <Link to="/" className="btn btn-ghost">
               Portail public
             </Link>
@@ -364,13 +396,32 @@ export function AdminPage() {
           {err ? <p className="alert error">{err}</p> : null}
           {msg ? <p className="alert success">{msg}</p> : null}
 
+          <section className="admin-kpi-grid" aria-label="Indicateurs de la console">
+            <div className="admin-kpi-card">
+              <span className="admin-kpi-label">Zones</span>
+              <strong className="admin-kpi-value">{zoneCountByType.all}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span className="admin-kpi-label">Arrond.</span>
+              <strong className="admin-kpi-value">{zoneCountByType.arr}</strong>
+            </div>
+            <div className="admin-kpi-card">
+              <span className="admin-kpi-label">Axes</span>
+              <strong className="admin-kpi-value">{zoneCountByType.route}</strong>
+            </div>
+            <div className="admin-kpi-card admin-kpi-card-wide">
+              <span className="admin-kpi-label">Admins QG actifs</span>
+              <strong className="admin-kpi-value">{admins.filter((a) => a.actif).length}</strong>
+            </div>
+          </section>
+
           <div className="chips" style={{ marginBottom: 10 }}>
             <button
               type="button"
               className={tab === 'zones' ? 'chip on' : 'chip'}
               onClick={() => setTab('zones')}
             >
-              Zones & dépôts
+              Communes & axes
             </button>
             <button
               type="button"
@@ -386,6 +437,7 @@ export function AdminPage() {
               <ZoneEditor
                 draft={draft}
                 setDraft={setDraft}
+                carteVisible={mapVisible}
                 onSave={async (payload) => {
                   try {
                     setErr(null);
@@ -408,10 +460,13 @@ export function AdminPage() {
               <ZoneList
                 zones={zones}
                 onEdit={(z) => {
+                  if (z.type === 'DEPOT_REPARATION') return;
+                  const t: SuperAdminZoneType =
+                    z.type === 'ROUTE_NATIONALE' ? 'ROUTE_NATIONALE' : 'ARRONDISSEMENT';
                   setDraft({
                     id: z.id,
                     nom: z.nom,
-                    type: (z.type as TypeZone) || 'ARRONDISSEMENT',
+                    type: t,
                     code: z.code,
                     numeroQg: z.numeroQg || '',
                     vertices: geoJsonToVertices(z.geometrie),
@@ -420,6 +475,7 @@ export function AdminPage() {
                   setErr(null);
                 }}
                 onDelete={async (z) => {
+                  if (z.type === 'DEPOT_REPARATION') return;
                   if (!confirm(`Supprimer la zone "${z.nom}" ? Irréversible.`)) return;
                   try {
                     setErr(null);
@@ -457,14 +513,16 @@ export function AdminPage() {
 
         </aside>
 
-        <section className="panel map-panel">
-          <PolygonPicker
-            zones={zones}
-            editingZoneId={draft.id}
-            vertices={draft.vertices}
-            onChange={(vertices) => setDraft({ ...draft, vertices })}
-          />
-        </section>
+        {mapVisible ? (
+          <section className="panel map-panel">
+            <PolygonPicker
+              zones={zones}
+              editingZoneId={draft.id}
+              vertices={draft.vertices}
+              onChange={(vertices) => setDraft({ ...draft, vertices })}
+            />
+          </section>
+        ) : null}
       </div>
     </div>
   );
@@ -477,11 +535,13 @@ export function AdminPage() {
 function ZoneEditor({
   draft,
   setDraft,
+  carteVisible = true,
   onSave,
   onCancel,
 }: {
   draft: ZoneDraft;
   setDraft: (d: ZoneDraft) => void;
+  carteVisible?: boolean;
   onSave: (payload: {
     nom: string;
     type: string;
@@ -496,8 +556,16 @@ function ZoneEditor({
   return (
     <section className="form bubble-card">
       <h3>{draft.id ? 'Modifier la zone' : 'Nouvelle zone'}</h3>
+      <p className="muted small admin-form-intro">
+        Commune ou route nationale : renseignez les champs puis tracez le contour sur la carte.
+      </p>
+      {!carteVisible ? (
+        <p className="muted small admin-form-intro" role="status">
+          Carte masquée — réaffichez-la pour tracer ou modifier le polygone sur la carte.
+        </p>
+      ) : null}
       <label>
-        Nom (commune / axe / nom du dépôt)
+        Nom (commune ou désignation de l&rsquo;axe)
         <input
           required
           value={draft.nom}
@@ -509,9 +577,9 @@ function ZoneEditor({
         Type
         <select
           value={draft.type}
-          onChange={(e) => setDraft({ ...draft, type: e.target.value as TypeZone })}
+          onChange={(e) => setDraft({ ...draft, type: e.target.value as SuperAdminZoneType })}
         >
-          {(['ARRONDISSEMENT', 'ROUTE_NATIONALE', 'DEPOT_REPARATION'] as TypeZone[]).map((t) => (
+          {SUPER_ADMIN_ZONE_TYPES.map((t) => (
             <option key={t} value={t}>
               {ZONE_TYPE_LABEL[t]}
             </option>
@@ -519,7 +587,7 @@ function ZoneEditor({
         </select>
       </label>
       <label>
-        Code (unique, ex. TNR-ARR-07, DEPOT-JIRAMA-01)
+        Code (unique, ex. TNR-ARR-07, RN7-TNR-DIL)
         <input
           required
           value={draft.code}
@@ -536,7 +604,7 @@ function ZoneEditor({
           placeholder="+261 …"
         />
       </label>
-      <div className="muted small">
+      <div className="muted small admin-zone-vertices">
         Sommets : {draft.vertices.length}
         {draft.vertices.length > 0 ? (
           <>
@@ -559,7 +627,7 @@ function ZoneEditor({
           </>
         ) : null}
       </div>
-      <div className="row">
+      <div className="row admin-form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
           {draft.id ? 'Annuler' : 'Réinitialiser'}
         </button>
@@ -592,20 +660,41 @@ function ZoneList({
   onEdit: (z: Zone) => void;
   onDelete: (z: Zone) => Promise<void> | void;
 }) {
-  const [filter, setFilter] = useState<'ALL' | TypeZone>('ALL');
-  const filtered = zones.filter((z) => filter === 'ALL' || z.type === filter);
+  const [filter, setFilter] = useState<'ALL' | SuperAdminZoneType>('ALL');
+  const [query, setQuery] = useState('');
+  const filtered = zones.filter((z) => {
+    if (filter !== 'ALL' && z.type !== filter) return false;
+    const q = normalizeText(query);
+    if (!q) return true;
+    return (
+      normalizeText(z.nom).includes(q) ||
+      normalizeText(z.code).includes(q) ||
+      normalizeText(z.numeroQg || '').includes(q)
+    );
+  });
   return (
     <section className="kanban">
-      <h3>Zones existantes ({zones.length})</h3>
+      <h3>Territoires ({zones.length})</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Les dépôts éventuels apparaissent en lecture seule (gérés par les communes).
+      </p>
+      <label className="small muted">
+        Recherche rapide
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Nom, code ou contact"
+        />
+      </label>
       <div className="chips" style={{ marginBottom: 6 }}>
-        {(['ALL', 'ARRONDISSEMENT', 'ROUTE_NATIONALE', 'DEPOT_REPARATION'] as const).map((t) => (
+        {(['ALL', ...SUPER_ADMIN_ZONE_TYPES] as const).map((t) => (
           <button
             key={t}
             type="button"
             className={filter === t ? 'chip on' : 'chip'}
             onClick={() => setFilter(t)}
           >
-            {t === 'ALL' ? 'Toutes' : ZONE_TYPE_LABEL[t]}
+            {t === 'ALL' ? 'Toutes' : ZONE_TYPE_LABEL[t as TypeZone]}
           </button>
         ))}
       </div>
@@ -614,36 +703,32 @@ function ZoneList({
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {filtered.map((z) => (
-            <li
-              key={z.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid #eee',
-                gap: 8,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600 }}>{z.nom}</div>
+            <li key={z.id} className="admin-list-item">
+              <div className="admin-list-item-main">
+                <div className="admin-list-item-title">{z.nom}</div>
                 <div className="muted small">
                   {z.code} · {ZONE_TYPE_LABEL[z.type as TypeZone] || z.type}
                   {z.numeroQg ? ` · ${z.numeroQg}` : ''}
                   {z.geometrie ? ' · tracée' : ''}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button type="button" className="btn btn-ghost small" onClick={() => onEdit(z)}>
-                  Éditer
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost small"
-                  onClick={() => void onDelete(z)}
-                >
-                  Suppr.
-                </button>
+              <div className="admin-list-item-actions">
+                {z.type === 'DEPOT_REPARATION' ? (
+                  <span className="muted small">Lecture seule</span>
+                ) : (
+                  <>
+                    <button type="button" className="btn btn-ghost small" onClick={() => onEdit(z)}>
+                      Éditer
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost small"
+                      onClick={() => void onDelete(z)}
+                    >
+                      Suppr.
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           ))}
@@ -677,8 +762,11 @@ function QgAdminForm({
   const [matricule, setMatricule] = useState('');
 
   return (
-    <section className="form">
+    <section className="form bubble-card">
       <h3>Créer un Admin QG</h3>
+      <p className="muted small admin-form-intro">
+        Créez un compte de supervision local rattaché a une zone.
+      </p>
       {zones.length === 0 ? (
         <p className="muted small">
           Créez d'abord une zone (arrondissement / route nationale) avant d'y
@@ -732,31 +820,48 @@ function QgAdminForm({
             Matricule (optionnel)
             <input value={matricule} onChange={(e) => setMatricule(e.target.value)} />
           </label>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={async () => {
-              if (!zoneId) return;
-              await onCreate({
-                zoneId,
-                nom: nom.trim(),
-                prenom: prenom.trim(),
-                email: email.trim(),
-                password,
-                numeroTelephone: numeroTelephone.trim(),
-                matricule: matricule.trim() || null,
-              });
-              setNom('');
-              setPrenom('');
-              setEmail('');
-              setPassword('');
-              setZoneId('');
-              setNumeroTelephone('');
-              setMatricule('');
-            }}
-          >
-            Créer Admin QG
-          </button>
+          <div className="row admin-form-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setNom('');
+                setPrenom('');
+                setEmail('');
+                setPassword('');
+                setZoneId('');
+                setNumeroTelephone('');
+                setMatricule('');
+              }}
+            >
+              Réinitialiser
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={async () => {
+                if (!zoneId) return;
+                await onCreate({
+                  zoneId,
+                  nom: nom.trim(),
+                  prenom: prenom.trim(),
+                  email: email.trim(),
+                  password,
+                  numeroTelephone: numeroTelephone.trim(),
+                  matricule: matricule.trim() || null,
+                });
+                setNom('');
+                setPrenom('');
+                setEmail('');
+                setPassword('');
+                setZoneId('');
+                setNumeroTelephone('');
+                setMatricule('');
+              }}
+            >
+              Créer Admin QG
+            </button>
+          </div>
         </>
       )}
     </section>
@@ -771,10 +876,10 @@ function QgAdminList({ admins, zones }: { admins: AdminQg[]; zones: Zone[] }) {
       {admins.length === 0 ? (
         <p className="muted small">Aucun Admin QG.</p>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <ul className="admin-qg-list">
           {admins.map((a) => (
-            <li key={a.id} style={{ padding: '6px 0', borderBottom: '1px solid #eee' }}>
-              <div style={{ fontWeight: 600 }}>
+            <li key={a.id} className="admin-qg-item">
+              <div className="admin-qg-item-title">
                 {a.prenom} {a.nom} {a.actif ? '' : '· SUSPENDU'}
               </div>
               <div className="muted small">
@@ -981,14 +1086,7 @@ function PolygonPicker({
           </select>
         </label>
         <div
-          style={{
-            marginLeft: 'auto',
-            marginRight: '8cm',
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
+          className="admin-map-filters"
         >
           <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             Région

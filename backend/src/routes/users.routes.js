@@ -2,7 +2,8 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/authenticate');
 const { User, Zone } = require('../models/postgres');
-const { RoleEnum } = require('../constants/enums');
+const { Op } = require('sequelize');
+const { RoleEnum, SpecialiteEnum } = require('../constants/enums');
 
 const router = express.Router();
 
@@ -79,7 +80,11 @@ router.get('/equipes', async (req, res) => {
     return res.status(403).json({ message: 'Admin QG uniquement' });
   }
   const equipes = await User.findAll({
-    where: { role: RoleEnum.EQUIPE_INTERVENTION, actif: true },
+    where: {
+      role: RoleEnum.EQUIPE_INTERVENTION,
+      actif: true,
+      specialite: { [Op.ne]: SpecialiteEnum.JIRAMA },
+    },
     attributes: [
       'id',
       'nom',

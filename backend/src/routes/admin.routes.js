@@ -5,8 +5,9 @@
  * Cf. middleware/requireAdminAccess.js.
  *
  * Scope :
- *   - CRUD zones (arrondissement / route nationale / dépôt de réparation)
- *     avec géométrie GeoJSON tracée sur la carte.
+ *   - CRUD zones « territoire super-admin » uniquement : arrondissement (commune)
+ *     et route nationale, avec géométrie GeoJSON. Les DEPOT_REPARATION ne sont ni
+ *     créés ni modifiés depuis cette console (gérés au niveau communal).
  *   - CRUD admins QG rattachés à une zone de commune.
  *   - CRUD agents de réparation (EQUIPE_INTERVENTION) rattachés à un dépôt,
  *     avec spécialité (ROUTE / JIRAMA / MACON / NETTOYEUR), suspension,
@@ -30,6 +31,9 @@ const {
 const router = express.Router();
 
 router.use(requireAdminAccess);
+
+/** Types de zone que la console super-admin peut créer ou assujettir à PATCH. */
+const SUPER_ADMIN_ZONE_TYPES = [TypeZoneEnum.ARRONDISSEMENT, TypeZoneEnum.ROUTE_NATIONALE];
 
 /* --------------------------- Serializers -------------------------- */
 function serializeZone(z) {
@@ -77,7 +81,7 @@ router.get('/zones', async (_req, res) => {
 router.post(
   '/zones',
   body('nom').isString().trim().isLength({ min: 2, max: 255 }),
-  body('type').isIn(Object.values(TypeZoneEnum)),
+  body('type').isIn(SUPER_ADMIN_ZONE_TYPES),
   body('code').isString().trim().isLength({ min: 2, max: 64 }),
   body('numeroQg').optional({ nullable: true }).isString().isLength({ max: 32 }),
   body('geometrie').optional({ nullable: true }).custom((v) => v === null || typeof v === 'object'),
@@ -103,7 +107,7 @@ router.patch(
   '/zones/:id',
   param('id').isUUID(),
   body('nom').optional().isString().trim().isLength({ min: 2, max: 255 }),
-  body('type').optional().isIn(Object.values(TypeZoneEnum)),
+  body('type').optional().isIn(SUPER_ADMIN_ZONE_TYPES),
   body('code').optional().isString().trim().isLength({ min: 2, max: 64 }),
   body('numeroQg').optional({ nullable: true }).isString().isLength({ max: 32 }),
   body('geometrie').optional({ nullable: true }).custom((v) => v === null || typeof v === 'object'),
@@ -113,6 +117,13 @@ router.patch(
 
     const zone = await Zone.findByPk(req.params.id);
     if (!zone) return res.status(404).json({ message: 'Zone introuvable' });
+
+    if (zone.type === TypeZoneEnum.DEPOT_REPARATION) {
+      return res.status(403).json({
+        message:
+          'Les dépôts de réparation ne sont pas modifiables depuis la console super-admin.',
+      });
+    }
 
     if (req.body.code && req.body.code !== zone.code) {
       const dup = await Zone.findOne({ where: { code: req.body.code } });
@@ -136,6 +147,13 @@ router.delete('/zones/:id', param('id').isUUID(), async (req, res) => {
 
   const zone = await Zone.findByPk(req.params.id);
   if (!zone) return res.status(404).json({ message: 'Zone introuvable' });
+
+  if (zone.type === TypeZoneEnum.DEPOT_REPARATION) {
+    return res.status(403).json({
+      message:
+        'Les dépôts de réparation ne sont pas supprimables depuis la console super-admin.',
+    });
+  }
 
   const linked = await User.count({ where: { zoneId: zone.id } });
   if (linked > 0) {

@@ -75,3 +75,5 @@ coverage/
 tmp/
 Cahier_des_charges_Anamboatra_v2.2.docx
 README.md
+
+scripts/update_cahier_uml.py

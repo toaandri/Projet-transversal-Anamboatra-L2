@@ -93,6 +93,7 @@ export function DashboardPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({ statuts: [], urgences: [], types: [] });
   const [sideOpen, setSideOpen] = useState(true);
+  const [mapVisible, setMapVisible] = useState(true);
   const detailRef = useRef<HTMLElement>(null);
   const sideRef   = useRef<HTMLElement>(null);
 
@@ -143,16 +144,36 @@ export function DashboardPage() {
 
   useMapSocket(load);
 
-  const filteredFeatures = useMemo(() => filterGeo(features, filters), [features, filters]);
+  /** Admin QG : pas de périmètre opérationnel « type JIRAMA » (électricité / réseau national). */
+  const filtersForRole = useMemo(() => {
+    if (role !== 'ADMIN_QG') return filters;
+    const types = filters.types.filter((t) => t !== 'ELECTRICITE');
+    return types.length === filters.types.length ? filters : { ...filters, types };
+  }, [role, filters]);
+
+  const typeFilterChips = useMemo(
+    () => (role === 'ADMIN_QG' ? TYPES.filter((t) => t.v !== 'ELECTRICITE') : TYPES),
+    [role],
+  );
+
+  const filteredFeatures = useMemo(
+    () => filterGeo(features, filtersForRole),
+    [features, filtersForRole],
+  );
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
-      if (filters.statuts.length && !filters.statuts.includes(t.statut)) return false;
-      if (filters.urgences.length && !filters.urgences.includes(t.urgence)) return false;
-      if (filters.types.length && !filters.types.includes(t.typeInfrastructure)) return false;
+      if (filtersForRole.statuts.length && !filtersForRole.statuts.includes(t.statut)) return false;
+      if (filtersForRole.urgences.length && !filtersForRole.urgences.includes(t.urgence))
+        return false;
+      if (
+        filtersForRole.types.length &&
+        !filtersForRole.types.includes(t.typeInfrastructure)
+      )
+        return false;
       return true;
     });
-  }, [tickets, filters]);
+  }, [tickets, filtersForRole]);
 
   // Stats calculées sur TOUS les tickets (pas filtrés) pour le strip d'en-tête
   const stats = useMemo(() => ({
@@ -215,6 +236,15 @@ export function DashboardPage() {
           </div>
         </div>
         <nav className="nav">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setMapVisible((v) => !v)}
+            aria-pressed={!mapVisible}
+            title={mapVisible ? 'Masquer la carte (vue formulaires / listes)' : 'Afficher la carte'}
+          >
+            {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+          </button>
           <Link to="/" className="btn btn-ghost">
             Portail public
           </Link>
@@ -232,6 +262,15 @@ export function DashboardPage() {
       </header>
 
       <div className="top-actions">
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setMapVisible((v) => !v)}
+          aria-pressed={!mapVisible}
+          title={mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+        >
+          {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+        </button>
         <Link to="/" className="btn btn-ghost">
           Portail public
         </Link>
@@ -247,7 +286,9 @@ export function DashboardPage() {
         </button>
       </div>
 
-      <div className={`dash-grid${sideOpen ? '' : ' side-closed'}`}>
+      <div
+        className={`dash-grid${sideOpen ? '' : ' side-closed'}${mapVisible ? '' : ' map-hidden'}`}
+      >
         <button
           type="button"
           className="side-toggle"
@@ -257,40 +298,6 @@ export function DashboardPage() {
         >
           {sideOpen ? '‹' : '›'}
         </button>
-        <section className="panel map-panel">
-          {!isTerrain && user?.role === 'CITOYEN' ? (
-            <p className="muted">Vue citoyenne : mêmes couches que le portail public (tickets confirmés).</p>
-          ) : null}
-          <MapView
-            geojson={filteredFeatures}
-            viewerRole={role}
-            onSelectFeature={onFeatureSelect}
-            pickMode={pickReport}
-            onPickLatLng={(la, ln) => {
-              setReportLat(la);
-              setReportLng(ln);
-            }}
-            height="100%"
-            myZone={myZone}
-          />
-          {/* Overlay flottant de stats sur la carte */}
-          {role === 'ADMIN_QG' && tickets.length > 0 ? (
-            <div className="map-stats-overlay">
-              <div className="map-stats-row">
-                <span className="map-stat-dot" style={{ background: '#dc2626' }} />
-                <span>{stats.attente} en attente</span>
-              </div>
-              <div className="map-stats-row">
-                <span className="map-stat-dot" style={{ background: '#3b82f6' }} />
-                <span>{stats.enCours} en cours</span>
-              </div>
-              <div className="map-stats-row">
-                <span className="map-stat-dot" style={{ background: '#22c55e' }} />
-                <span>{stats.termine} terminés</span>
-              </div>
-            </div>
-          ) : null}
-        </section>
         <aside className="panel side" ref={sideRef}>
           <div className="side-header">
             <span className="qg-mark" aria-hidden="true">
@@ -332,7 +339,10 @@ export function DashboardPage() {
           ) : null}
 
           {(() => {
-            const total = filters.statuts.length + filters.urgences.length + filters.types.length;
+            const total =
+              filtersForRole.statuts.length +
+              filtersForRole.urgences.length +
+              filtersForRole.types.length;
             return (
               <section className="qg-section">
                 <header className="qg-section-head">
@@ -360,7 +370,7 @@ export function DashboardPage() {
                       <button
                         key={s}
                         type="button"
-                        className={filters.statuts.includes(s) ? 'chip dot on' : 'chip dot'}
+                        className={filtersForRole.statuts.includes(s) ? 'chip dot on' : 'chip dot'}
                         style={{ ['--chip-color' as string]: STATUT_COLORS[s] }}
                         onClick={() => toggleFilter('statuts', s)}
                       >
@@ -378,7 +388,7 @@ export function DashboardPage() {
                       <button
                         key={u}
                         type="button"
-                        className={filters.urgences.includes(u) ? 'chip dot on' : 'chip dot'}
+                        className={filtersForRole.urgences.includes(u) ? 'chip dot on' : 'chip dot'}
                         style={{ ['--chip-color' as string]: URGENCE_COLORS[u] }}
                         onClick={() => toggleFilter('urgences', u)}
                       >
@@ -392,11 +402,13 @@ export function DashboardPage() {
                 <div className="qg-filter">
                   <div className="qg-filter-label">Type d'infrastructure</div>
                   <div className="chips">
-                    {TYPES.map((t) => (
+                    {typeFilterChips.map((t) => (
                       <button
                         key={t.v}
                         type="button"
-                        className={filters.types.includes(t.v) ? 'chip dot on' : 'chip dot'}
+                        className={
+                          filtersForRole.types.includes(t.v) ? 'chip dot on' : 'chip dot'
+                        }
                         style={{ ['--chip-color' as string]: t.color }}
                         onClick={() => toggleFilter('types', t.v)}
                       >
@@ -575,11 +587,51 @@ export function DashboardPage() {
                   <circle cx="20" cy="20" r="19" stroke="rgba(0,126,58,0.18)" strokeWidth="1.5" fill="rgba(0,126,58,0.04)"/>
                   <path d="M20 11c-3.866 0-7 3.134-7 7 0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="rgba(0,126,58,0.35)"/>
                 </svg>
-                <p className="muted small">Cliquez sur un marqueur de la carte ou une carte Kanban pour afficher le détail.</p>
+                <p className="muted small">
+                  {mapVisible
+                    ? 'Cliquez sur un marqueur de la carte ou une carte Kanban pour afficher le détail.'
+                    : 'Carte masquée — ouvrez un ticket depuis le Kanban ou réaffichez la carte.'}
+                </p>
               </div>
             )}
           </section>
         </aside>
+
+        {mapVisible ? (
+          <section className="panel map-panel">
+            {!isTerrain && user?.role === 'CITOYEN' ? (
+              <p className="muted">Vue citoyenne : mêmes couches que le portail public (tickets confirmés).</p>
+            ) : null}
+            <MapView
+              geojson={filteredFeatures}
+              viewerRole={role}
+              onSelectFeature={onFeatureSelect}
+              pickMode={pickReport}
+              onPickLatLng={(la, ln) => {
+                setReportLat(la);
+                setReportLng(ln);
+              }}
+              height="100%"
+              myZone={myZone}
+            />
+            {role === 'ADMIN_QG' && tickets.length > 0 ? (
+              <div className="map-stats-overlay">
+                <div className="map-stats-row">
+                  <span className="map-stat-dot" style={{ background: '#dc2626' }} />
+                  <span>{stats.attente} en attente</span>
+                </div>
+                <div className="map-stats-row">
+                  <span className="map-stat-dot" style={{ background: '#3b82f6' }} />
+                  <span>{stats.enCours} en cours</span>
+                </div>
+                <div className="map-stats-row">
+                  <span className="map-stat-dot" style={{ background: '#22c55e' }} />
+                  <span>{stats.termine} terminés</span>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
 
       {reportOpen && user?.role === 'AGENT_PATROUILLE' ? (

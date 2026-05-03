@@ -1,7 +1,7 @@
 const { Op, literal } = require('sequelize');
 const { sequelize } = require('../config/postgres');
 const { Ticket, SuggestionCitoyen } = require('../models/postgres');
-const { RoleEnum, StatutEnum, MapRole } = require('../constants/enums');
+const { RoleEnum, StatutEnum, MapRole, TypeEnum } = require('../constants/enums');
 
 const statutsPublics = [
   StatutEnum.REPARATION_PREVUE,
@@ -31,7 +31,11 @@ function ticketVisibilityWhere(principal) {
   }
 
   if (role === RoleEnum.ADMIN_QG) {
-    return { zoneId };
+    // Réseau « type JIRAMA » : hors compétence de la commune (pas de lecture opérationnelle).
+    return {
+      zoneId,
+      typeInfrastructure: { [Op.ne]: TypeEnum.ELECTRICITE },
+    };
   }
 
   if (role === RoleEnum.EQUIPE_INTERVENTION) {
@@ -61,8 +65,15 @@ function suggestionsWhere(principal) {
   if (principal.role === RoleEnum.EQUIPE_INTERVENTION) {
     return null;
   }
-  if (principal.role === RoleEnum.AGENT_PATROUILLE || principal.role === RoleEnum.ADMIN_QG) {
+  if (principal.role === RoleEnum.AGENT_PATROUILLE) {
     return { zoneId: principal.zoneId, traitee: false };
+  }
+  if (principal.role === RoleEnum.ADMIN_QG) {
+    return {
+      zoneId: principal.zoneId,
+      traitee: false,
+      typeSuggere: { [Op.ne]: TypeEnum.ELECTRICITE },
+    };
   }
   return null;
 }

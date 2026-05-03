@@ -4,8 +4,8 @@
  * Routes protégées par JWT (authenticate) + requireRole(ADMIN_QG).
  * Le QG ne peut manipuler que ses agents de SA zone.
  *
- * Les équipes d'intervention (EQUIPE_INTERVENTION) sont aussi gérées par
- * l'Admin QG de la commune (logique "ministère supervise, commune opère").
+ * Les équipes d'intervention hors spécialité JIRAMA sont gérées par l'Admin QG
+ * (JIRAMA : compétence nationale — pas listées ni affectables depuis le QG).
  *
  * Actions :
  *   - GET    /api/qg/agents                     liste des AGENT_PATROUILLE de la zone
@@ -17,6 +17,7 @@
  *   - DELETE /api/qg/agents/:id                 suppression (si aucun ticket signalé)
  */
 const express = require('express');
+const { Op } = require('sequelize');
 const { body, param, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/requireRole');
@@ -56,6 +57,15 @@ async function findRepairInMyZone(id, zoneId) {
   return User.findOne({
     where: { id, zoneId, role: RoleEnum.EQUIPE_INTERVENTION },
   });
+}
+
+function assertQgMayManageRepairAgent(agent) {
+  if (!agent) return;
+  if (agent.specialite === SpecialiteEnum.JIRAMA) {
+    const err = new Error('Les équipes JIRAMA sont hors périmètre du QG.');
+    err.status = 403;
+    throw err;
+  }
 }
 
 /* ------------------------------- List ----------------------------- */
@@ -212,7 +222,11 @@ router.get('/repair-agents', async (req, res) => {
     return res.status(400).json({ message: "Ce QG n'est rattaché à aucune zone" });
   }
   const agents = await User.findAll({
-    where: { zoneId: req.user.zoneId, role: RoleEnum.EQUIPE_INTERVENTION },
+    where: {
+      zoneId: req.user.zoneId,
+      role: RoleEnum.EQUIPE_INTERVENTION,
+      specialite: { [Op.ne]: SpecialiteEnum.JIRAMA },
+    },
     order: [['nom', 'ASC'], ['prenom', 'ASC']],
   });
   return res.json({ agents: agents.map(serializeRepair) });
@@ -227,8 +241,8 @@ router.post(
   body('numeroTelephone').isString().trim().isLength({ min: 4, max: 32 }),
   body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
   body('specialite')
-    .isIn(Object.values(SpecialiteEnum))
-    .withMessage('specialite doit être ROUTE, JIRAMA, MACON ou NETTOYEUR'),
+    .isIn([SpecialiteEnum.ROUTE, SpecialiteEnum.MACON, SpecialiteEnum.NETTOYEUR])
+    .withMessage('specialite doit être ROUTE, MACON ou NETTOYEUR (JIRAMA : compétence nationale)'),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -264,6 +278,11 @@ router.patch('/repair-agents/:id/suspendre', param('id').isUUID(), async (req, r
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
+  try {
+    assertQgMayManageRepairAgent(agent);
+  } catch (e) {
+    return res.status(e.status || 403).json({ message: e.message });
+  }
 
   await agent.update({ actif: false, appareilUnique: null });
   return res.json({ agent: serializeRepair(agent) });
@@ -275,6 +294,11 @@ router.patch('/repair-agents/:id/reactiver', param('id').isUUID(), async (req, r
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
+  try {
+    assertQgMayManageRepairAgent(agent);
+  } catch (e) {
+    return res.status(e.status || 403).json({ message: e.message });
+  }
 
   await agent.update({ actif: true });
   return res.json({ agent: serializeRepair(agent) });
@@ -286,6 +310,11 @@ router.delete('/repair-agents/:id', param('id').isUUID(), async (req, res) => {
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
+  try {
+    assertQgMayManageRepairAgent(agent);
+  } catch (e) {
+    return res.status(e.status || 403).json({ message: e.message });
+  }
 
   await agent.destroy();
   return res.json({ ok: true });

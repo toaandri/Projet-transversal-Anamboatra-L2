@@ -16,9 +16,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
 import type { Agent, RepairAgent, Specialite } from '../types';
 
+/** Spécialités gérées par le QG (JIRAMA : compétence nationale, hors console commune). */
 const SPECIALITE_OPTIONS: { v: Specialite; l: string }[] = [
   { v: 'ROUTE', l: 'Route (voirie)' },
-  { v: 'JIRAMA', l: 'JIRAMA (courant + eau)' },
   { v: 'MACON', l: 'Maçon (bâtiment)' },
   { v: 'NETTOYEUR', l: 'Nettoyeur (propreté)' },
 ];

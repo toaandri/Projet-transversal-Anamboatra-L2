@@ -5,6 +5,7 @@ import type {
   MapTilesPayload,
   RepairAgent,
   Specialite,
+  SuggestionCitoyen,
   Ticket,
   User,
   Zone,
@@ -117,6 +118,9 @@ export const api = {
     }),
 
   mapTiles: () => request<MapTilesPayload>('/api/map/tiles'),
+
+  suggestionCitoyenne: (id: string) =>
+    request<{ suggestion: SuggestionCitoyen }>(`/api/suggestions/${id}`),
 
   tickets: () => request<{ tickets: Ticket[] }>('/api/tickets'),
 
@@ -323,6 +327,8 @@ export const api = {
     numeroTelephone: string;
     matricule?: string | null;
     specialite: Specialite;
+    latitude: number;
+    longitude: number;
   }) => request<{ agent: RepairAgent }>('/api/qg/repair-agents', { method: 'POST', json: body }),
 
   qgSuspendRepairAgent: (id: string) =>

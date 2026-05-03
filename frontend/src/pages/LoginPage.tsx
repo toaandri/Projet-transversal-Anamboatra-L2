@@ -5,8 +5,8 @@ import { useAuth } from '../useAuth';
 export function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState('admin@anamboatra.mg');
-  const [password, setPassword] = useState('admin1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -28,25 +28,20 @@ export function LoginPage() {
     <div className="page login-page">
       <div className="panel login-card">
         <Link to="/" className="muted small back-link">
-          ← Retour portail public
+          ← Retour présentation
         </Link>
         <h1>Connexion Anamboatra</h1>
-        <p className="muted small">
-          Espace web réservé au <strong>super-administrateur</strong>, aux
-          <strong> Administrateurs QG</strong> et aux <strong>citoyens</strong>.
-          Les <strong>agents de patrouille</strong> et les{' '}
-          <strong>équipes d'intervention</strong> doivent utiliser l'application
-          mobile <em>Anamboatra Terrain</em>.
-        </p>
-        <p className="muted small">
-          Au premier démarrage (base vide), seul le compte <code>admin@anamboatra.mg</code>{' '}
-          existe. Il sert à créer les zones, dépôts, Admins QG et agents de réparation
-          depuis la console d'administration.
-        </p>
+        <p className="muted small">Accès réservé : citoyens, administrateurs QG et MTP (interface web).</p>
+        <details className="login-details-muted">
+          <summary>Patrouilles et équipes d&apos;intervention</summary>
+          <p className="muted small">
+            Identifiants actifs depuis l&apos;application mobile Terrain (non disponible depuis ce navigateur).
+          </p>
+        </details>
         {err ? <p className="alert error">{err}</p> : null}
         <form onSubmit={onSubmit} className="form">
           <label>
-            E-mail
+            Adresse e-mail
             <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
           <label>
@@ -60,9 +55,14 @@ export function LoginPage() {
               minLength={6}
             />
           </label>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Connexion…' : 'Se connecter'}
-          </button>
+          <div className="login-form-actions">
+            <Link to="/" className="btn btn-ghost">
+              Annuler
+            </Link>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Connexion…' : 'Connexion'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

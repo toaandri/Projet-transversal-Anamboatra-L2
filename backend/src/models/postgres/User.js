@@ -35,7 +35,7 @@ function defineUser(sequelize) {
       },
       // Spécialité d'une EQUIPE_INTERVENTION (cf. SpecialiteEnum)
       specialite: {
-        type: DataTypes.ENUM('ROUTE', 'JIRAMA', 'MACON', 'NETTOYEUR'),
+        type: DataTypes.ENUM('ROUTE', 'JIRAMA', 'MACON', 'NETTOYEUR', 'REPARATEUR'),
         allowNull: true,
       },
       // Fingerprint terminal scellé au premier login (UNIQUE).

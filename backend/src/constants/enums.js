@@ -34,6 +34,7 @@ const SpecialiteEnum = Object.freeze({
   JIRAMA: 'JIRAMA',
   MACON: 'MACON',
   NETTOYEUR: 'NETTOYEUR',
+  REPARATEUR: 'REPARATEUR',
 });
 
 const TypeZoneEnum = Object.freeze({
@@ -46,6 +47,17 @@ const MapRole = Object.freeze({
   PUBLIC: 'PUBLIC',
 });
 
+/** Clôture terrain (agent) — traçabilité CDC v2 / retour QG. */
+const TerrainClotureCodeEnum = Object.freeze({
+  OFFICIAL_TICKET: 'OFFICIAL_TICKET',
+  /** @deprecated gardé pour anciennes lignes BD ; nouveau terrain : NON_CONFORME */
+  FAUSSE_ALERTE: 'FAUSSE_ALERTE',
+  /** Remplit le cas « scam / tromperie » côté patrouille. */
+  NON_CONFORME: 'NON_CONFORME',
+  NON_REPERE: 'NON_REPERE',
+  AUTRE: 'AUTRE',
+});
+
 module.exports = {
   RoleEnum,
   UrgenceEnum,
@@ -54,4 +66,5 @@ module.exports = {
   SpecialiteEnum,
   TypeZoneEnum,
   MapRole,
+  TerrainClotureCodeEnum,
 };

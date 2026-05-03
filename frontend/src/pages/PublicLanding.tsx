@@ -1,655 +1,575 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../useAuth';
 
-type Phrase = { line1: string; line2: string };
-
-const PHRASES: Phrase[] = [
-  { line1: 'Bâti pour les villes,', line2: "pour l'ère post-réactive." },
-  { line1: 'Fanjakana miasa', line2: 'ho anao.' },
-];
-
-const CITIES = [
-  { name: 'Antananarivo', tag: 'Capitale', color: 'blue' },
-  { name: 'Toamasina', tag: 'Côte est', color: 'green' },
-  { name: 'Mahajanga', tag: 'Nord-ouest', color: 'red' },
-  { name: 'Antsirabe', tag: 'Vakinankaratra', color: 'blue' },
-  { name: 'Fianarantsoa', tag: 'Hautes terres', color: 'green' },
-  { name: 'Toliara', tag: 'Sud-ouest', color: 'red' },
-] as const;
-
-// Pins en coordonnées SVG (viewBox 0 0 100 200) — calés sur l'intérieur du contour
-const MAP_PREVIEW_PINS = [
-  { name: 'Antsiranana', x: 78, y: 14, color: '#c8102e', delay: 0 },
-  { name: 'Mahajanga', x: 38, y: 56, color: '#16a34a', delay: 0.5 },
-  { name: 'Toamasina', x: 80, y: 92, color: '#1a73e8', delay: 1.0 },
-  { name: 'Antananarivo', x: 56, y: 102, color: '#1a73e8', delay: 1.5 },
-  { name: 'Antsirabe', x: 50, y: 117, color: '#16a34a', delay: 2.0 },
-  { name: 'Fianarantsoa', x: 50, y: 138, color: '#c8102e', delay: 2.5 },
-  { name: 'Toliara', x: 12, y: 165, color: '#16a34a', delay: 3.0 },
-];
-
-// Contour de Madagascar reconstruit depuis les coordonnées GeoJSON réelles
-// (lon 43.25→50.48, lat -25.60→-11.95) projetées sur viewBox 0 0 100 200
 const MADAGASCAR_PATH =
   'M 87.05 7.62 L 90.72 13.85 L 94.14 23.53 L 96.37 41.16 L 99.95 48.01 L 98.58 55.04 L 96.13 59.34 L 91.43 50.76 L 88.83 55.10 L 91.47 65.95 L 90.24 72.16 L 86.42 75.55 L 85.55 87.96 L 80.10 105.04 L 73.28 125.23 L 64.74 152.99 L 59.43 173.36 L 53.18 190.35 L 41.93 193.82 L 29.86 200.00 L 21.89 196.26 L 10.91 191.02 L 7.10 183.29 L 6.19 170.30 L 1.32 158.62 L 0.06 148.07 L 2.54 137.51 L 8.91 134.97 L 8.94 130.10 L 15.55 118.99 L 16.80 109.66 L 13.59 102.72 L 10.97 93.49 L 9.86 79.99 L 14.69 71.79 L 16.55 62.50 L 23.44 61.96 L 31.16 58.96 L 36.28 56.30 L 42.35 56.10 L 50.23 47.76 L 61.62 38.74 L 65.77 31.37 L 63.89 25.11 L 69.76 26.87 L 77.39 16.69 L 77.64 7.88 L 82.22 1.33 L 87.05 7.62 Z';
 
-const TYPE_SPEED = 48;
-const ERASE_SPEED = 24;
-const HOLD_MS = 2600;
-const SWITCH_PAUSE = 420;
+/** ID YouTube de référence (poster + iframe de secours si le MP4 local indisponible). */
+const HERO_REFERENCE_YOUTUBE_ID = '1roGkBs8NbA';
 
-function useTypewriter(phrases: Phrase[]) {
-  const [phraseIdx, setPhraseIdx] = useState(0);
-  const [pos, setPos] = useState(0);
-  const [mode, setMode] = useState<'typing' | 'erasing'>('typing');
+/** Fichier servi depuis `frontend/public/` (non versionné dans git par défaut). */
+const LOCAL_HERO_MP4 = 'videos/tana-hero-1080p.mp4';
 
-  const phrase = phrases[phraseIdx];
-  const fullText = `${phrase.line1}\n${phrase.line2}`;
+/**
+ * Villes capitales régionales — coordonnées user space du viewBox SVG (alignées au `MADAGASCAR_PATH`,
+ * axe N→S comme sur une carte géographique réelle).
+ */
+const MAP_PINS = [
+  /* NE presqu’île ; x plus bas qu’extrême pointe vide */
+  { name: 'Antsiranana', x: 86, y: 11, color: '#c8102e', delay: 200 },
+  /* Golfe de Mojanga : même bande latérale que L 31–42 / y≈56–59 du path (évite l’« océan » à gauche) */
+  { name: 'Mahajanga', x: 38, y: 56, color: '#16a34a', delay: 400 },
+  { name: 'Toamasina', x: 80, y: 83, color: '#1a73e8', delay: 600 },
+  { name: 'Antananarivo', x: 51, y: 101, color: '#1a73e8', delay: 800 },
+  { name: 'Antsirabe', x: 45, y: 110, color: '#16a34a', delay: 1000 },
+  { name: 'Fianarantsoa', x: 55, y: 138, color: '#c8102e', delay: 1200 },
+  { name: 'Toliara', x: 34, y: 172, color: '#16a34a', delay: 1400 },
+];
 
+const SCREENS = [
+  { id: 'manifesto', label: 'Présentation du dispositif', navLabel: 'Présentation' },
+  { id: 'carte', label: 'Référentiel cartographique', navLabel: 'Carte' },
+  { id: 'roles', label: 'Acteurs et périmètres', navLabel: 'Acteurs' },
+  { id: 'agir', label: 'Consultation et signalement officiel', navLabel: 'Accès' },
+] as const;
+
+type ScreenId = (typeof SCREENS)[number]['id'];
+
+const SCREEN_ORDER: ScreenId[] = SCREENS.map((s) => s.id);
+
+function usePrefersReducedMotion(): boolean {
+  const [pref, setPref] = useState(false);
   useEffect(() => {
-    let cancelled = false;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    if (mode === 'typing') {
-      if (pos < fullText.length) {
-        const nextChar = fullText[pos];
-        const isPunct = nextChar === ',' || nextChar === '.';
-        const isNewline = nextChar === '\n';
-        const isSpace = nextChar === ' ';
-        const jitter = Math.random() * 24 - 10;
-        const delay = isPunct
-          ? 240
-          : isNewline
-            ? 200
-            : isSpace
-              ? 30
-              : Math.max(18, TYPE_SPEED + jitter);
-        timeoutId = setTimeout(() => {
-          if (!cancelled) setPos((p) => p + 1);
-        }, delay);
-      } else {
-        timeoutId = setTimeout(() => {
-          if (!cancelled) setMode('erasing');
-        }, HOLD_MS);
-      }
-    } else {
-      if (pos > 0) {
-        timeoutId = setTimeout(() => {
-          if (!cancelled) setPos((p) => p - 1);
-        }, ERASE_SPEED);
-      } else {
-        timeoutId = setTimeout(() => {
-          if (cancelled) return;
-          setMode('typing');
-          setPhraseIdx((i) => (i + 1) % phrases.length);
-        }, SWITCH_PAUSE);
-      }
-    }
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [pos, mode, fullText, phrases.length]);
-
-  const typed = fullText.slice(0, pos);
-  const newlineIdx = typed.indexOf('\n');
-  const line1 = newlineIdx === -1 ? typed : typed.slice(0, newlineIdx);
-  const line2 = newlineIdx === -1 ? '' : typed.slice(newlineIdx + 1);
-  const activeLine: 1 | 2 = pos <= phrase.line1.length ? 1 : 2;
-
-  return { line1, line2, activeLine };
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setPref(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  return pref;
 }
 
-function useScrollReveal() {
+/**
+ * Associe une section dominante selon ce qui coupe le mieux la ligne médiane du
+ * conteneur (plus stable que plusieurs seuils avec l’observer), met à jour
+ * `is-active` pour rejouer les animations, et expose `active` / `goTo`.
+ */
+function useStoryScreen(scrollerRef: React.RefObject<HTMLElement | null>) {
+  const [active, setActive] = useState<ScreenId>('manifesto');
+
+  const goTo = useCallback((id: ScreenId) => {
+    const el = scrollerRef.current?.querySelector<HTMLElement>(`[data-screen="${id}"]`);
+    if (!el) return;
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [scrollerRef]);
+
   useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return;
-    const els = document.querySelectorAll<HTMLElement>('[data-reveal]');
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-revealed');
-            obs.unobserve(entry.target);
-          }
+    const root = scrollerRef.current;
+    if (!root) return;
+
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-screen]'));
+    if (sections.length === 0) return;
+
+    let raf = 0;
+    const tick = () => {
+      const rc = root.getBoundingClientRect();
+      const midY = rc.top + rc.height / 2;
+      let best: ScreenId | null = null;
+      let bestScore = -Infinity;
+      for (const el of sections) {
+        const r = el.getBoundingClientRect();
+        const overlap = Math.min(r.bottom, rc.bottom) - Math.max(r.top, rc.top);
+        if (overlap <= 8) continue;
+        const overlapRatio =
+          overlap / Math.min(Math.max(r.height, 1), Math.max(rc.height, 1));
+        const centerDist = Math.abs(r.top + r.height / 2 - midY);
+        const score = overlapRatio * 180 - centerDist * 0.35;
+        if (score > bestScore) {
+          bestScore = score;
+          best = el.dataset.screen as ScreenId;
+        }
+      }
+      if (best) {
+        sections.forEach((el) => {
+          el.classList.toggle('is-active', el.dataset.screen === best);
         });
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
+        setActive((p) => (p === best ? p : best!));
+      }
+    };
+
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+    };
+
+    tick();
+    root.addEventListener('scroll', schedule, { passive: true });
+    const ro = new ResizeObserver(schedule);
+    ro.observe(root);
+    return () => {
+      cancelAnimationFrame(raf);
+      root.removeEventListener('scroll', schedule);
+      ro.disconnect();
+    };
+  }, [scrollerRef]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('[contenteditable="true"]')) return;
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+
+      const i = SCREEN_ORDER.indexOf(active);
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        if (i < SCREEN_ORDER.length - 1) {
+          e.preventDefault();
+          goTo(SCREEN_ORDER[i + 1]!);
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        if (i > 0) {
+          e.preventDefault();
+          goTo(SCREEN_ORDER[i - 1]!);
+        }
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goTo('manifesto');
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goTo('agir');
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, goTo]);
+
+  return { active, goTo };
 }
 
-function useScrollProgress() {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const h = document.documentElement;
-      const max = h.scrollHeight - h.clientHeight;
-      setProgress(max > 0 ? (h.scrollTop / max) * 100 : 0);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+function StoryMadagascarMapCard({ reducedMotion }: { reducedMotion: boolean }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
+
+  const applyTilt = useCallback((nx: number, ny: number) => {
+    const p = parallaxRef.current;
+    if (!p) return;
+    const maxDeg = 6.5;
+    const maxMove = 6;
+    const rx = -ny * maxDeg;
+    const ry = nx * maxDeg;
+    const tx = nx * maxMove;
+    const ty = ny * maxMove;
+    p.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.018, 1.018, 1)`;
   }, []);
-  return progress;
+
+  const onMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (reducedMotion) return;
+      const root = rootRef.current;
+      const p = parallaxRef.current;
+      if (!root || !p) return;
+      p.style.transition = 'none';
+      root.classList.add('story-mapcard--hover');
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const rect = root.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) return;
+        const nx = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+        const ny = Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1));
+        applyTilt(nx, ny);
+      });
+    },
+    [applyTilt, reducedMotion],
+  );
+
+  const onLeave = useCallback(() => {
+    const root = rootRef.current;
+    const p = parallaxRef.current;
+    root?.classList.remove('story-mapcard--hover');
+    if (!p) return;
+    p.style.transition = 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+    p.style.transform = 'translate3d(0,0,0) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+  }, []);
+
+  useEffect(() => {
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  return (
+    <div
+      ref={rootRef}
+      className="story-mapcard"
+      onMouseMove={reducedMotion ? undefined : onMove}
+      onMouseLeave={reducedMotion ? undefined : onLeave}
+    >
+      <div ref={parallaxRef} className="story-mapcard-parallax">
+        <div className="story-mapcard-grid" />
+        <div className="story-mapcard-scan" />
+        <div className="story-mapcard-badge">
+          <span className="story-mapcard-live" aria-hidden />
+          Référentiel MTP · mise à jour des statuts selon circuits habilités
+        </div>
+        <svg
+          className="story-mapcard-svg"
+          viewBox="-6 -8 112 218"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <defs>
+            <linearGradient id="storyMadaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(0, 126, 58, 0.45)" />
+              <stop offset="100%" stopColor="rgba(11, 61, 145, 0.32)" />
+            </linearGradient>
+          </defs>
+          <path
+            d={MADAGASCAR_PATH}
+            fill="url(#storyMadaGrad)"
+            stroke="#0b3d91"
+            strokeWidth="0.8"
+            strokeLinejoin="round"
+          />
+          {MAP_PINS.map((pin) => (
+            <g key={pin.name} transform={`translate(${pin.x} ${pin.y})`}>
+              <g
+                className="story-pin-anim"
+                style={{ animationDelay: `${pin.delay}ms` } as React.CSSProperties}
+              >
+                <circle className="story-pin-radar" r="2.4" fill={pin.color} />
+                <circle r="1.65" fill={pin.color} stroke="#fff" strokeWidth="0.65" />
+                <title>{pin.name}</title>
+              </g>
+            </g>
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
 }
 
 export function PublicLanding() {
   const { user } = useAuth();
-  const { line1, line2, activeLine } = useTypewriter(PHRASES);
-  const progress = useScrollProgress();
-  useScrollReveal();
+  const scrollerRef = useRef<HTMLElement>(null);
+  const { active, goTo } = useStoryScreen(scrollerRef);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const [heroStreamFallback, setHeroStreamFallback] = useState(false);
+
+  const stepIndex = SCREEN_ORDER.indexOf(active);
+  const liveLabel =
+    stepIndex >= 0
+      ? `Écran ${stepIndex + 1} sur ${SCREENS.length} · ${SCREENS[stepIndex]!.label}`
+      : '';
+
+  const youtubeIdResolved = useMemo(() => {
+    const v = import.meta.env.VITE_ANTANANARIVO_VIDEO_ID?.trim();
+    if (v && /^[a-zA-Z0-9_-]{8,14}$/.test(v)) return v;
+    return HERO_REFERENCE_YOUTUBE_ID;
+  }, []);
+
+  const heroPosterUrl = useMemo(
+    () => `https://i.ytimg.com/vi/${youtubeIdResolved}/maxresdefault.jpg`,
+    [youtubeIdResolved],
+  );
+  const heroYoutubeEmbedSrc = useMemo(
+    () =>
+      `https://www.youtube-nocookie.com/embed/${youtubeIdResolved}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1` +
+      `&playlist=${youtubeIdResolved}&rel=0&modestbranding=1&disablekb=1`,
+    [youtubeIdResolved],
+  );
+
+  const heroResolvedMp4Src = useMemo(() => {
+    const custom = import.meta.env.VITE_HERO_VIDEO_SRC?.trim();
+    const root = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}`;
+    if (custom) {
+      if (/^https?:\/\//i.test(custom)) return custom;
+      return `${root}${custom.replace(/^\//, '')}`;
+    }
+    return `${root}${LOCAL_HERO_MP4}`;
+  }, []);
+
+  useEffect(() => {
+    const v = heroVideoRef.current;
+    if (!v || prefersReducedMotion || heroStreamFallback) return;
+    void v.play().catch(() => setHeroStreamFallback(true));
+  }, [prefersReducedMotion, heroStreamFallback]);
 
   return (
-    <div className="landing-page">
-      <div className="landing-bg" aria-hidden="true">
-        <div className="landing-orb orb-a" />
-        <div className="landing-orb orb-b" />
-        <div className="landing-orb orb-c" />
-        <div className="landing-orb orb-d" />
-        <div className="landing-grid" />
-      </div>
-
-      <div className="landing-progress" style={{ width: `${progress}%` }} aria-hidden="true" />
-
-      <div className="landing-gov-bar">
-        <span className="landing-gov-flag" aria-hidden="true" />
-        <div className="landing-gov-text">
-          <strong>République de Madagascar</strong>
-          <span>Ministère des Travaux Publics</span>
-        </div>
-        <span className="landing-gov-tag">SGRI · Plateforme Anamboatra</span>
-      </div>
-
-      <header className="landing-nav">
-        <Link to="/" className="landing-brand">
-          <span className="landing-mark" aria-hidden="true">
-            <span className="landing-mark-flag" />
-            <span className="landing-mark-pin" />
+    <div className="story-page" data-story-active={active}>
+      {/* Marque + nav flottante */}
+      <header className="story-nav">
+        <Link to="/" className="story-brand">
+          <span className="story-mark" aria-hidden="true">
+            <span className="story-mark-flag" />
+            <span className="story-mark-pin" />
           </span>
-          <span className="landing-brand-text">
+          <span className="story-brand-text">
             <strong>Anamboatra</strong>
-            <small>Système de Gestion et Réponse aux Incidents</small>
+            <small>Ministère des Travaux Publics — suivi géolocalisé des dossiers infrastructure</small>
           </span>
         </Link>
-        <nav className="landing-nav-links">
-          <a href="#constat" className="landing-nav-link">
-            Le constat
-          </a>
-          <a href="#promesse" className="landing-nav-link">
-            Notre promesse
-          </a>
-          <a href="#cycle" className="landing-nav-link">
-            Cycle de vie
-          </a>
-          <a href="#missions" className="landing-nav-link">
-            Engagements
-          </a>
+        <nav className="story-nav-links" aria-label="Sections">
+          <Link to="/travaux" className="story-nav-pill">
+            Carte publique
+          </Link>
           {user ? (
-            <Link to="/app" className="landing-cta-mini">
-              Espace connecté
+            <Link to="/app" className="story-nav-cta">
+              Espace métier
             </Link>
           ) : (
-            <Link to="/connexion" className="landing-cta-mini">
-              Connexion travailleurs
+            <Link to="/connexion" className="story-nav-cta">
+              Connexion
             </Link>
           )}
         </nav>
       </header>
 
-      <main className="landing-main">
-        {/* HERO */}
-        <section className="landing-hero">
-          <div className="landing-hero-text">
-            <span className="landing-chip" data-reveal>
-              <span className="landing-chip-dot" />
-              Service public · Anamboatra 2035
-            </span>
-            <h1 className="landing-title" aria-label={`${PHRASES[0].line1} ${PHRASES[0].line2}`}>
-              <span className="line line-1">
-                {line1}
-                {activeLine === 1 ? <span className="caret" aria-hidden="true" /> : null}
+      <span className="story-sr-only" aria-live="polite">
+        {liveLabel}
+      </span>
+
+      {/* Indicateur latéral 4 points */}
+      <aside className="story-dots" aria-label="Sommaire des sections">
+        {SCREENS.map((s, idx) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`story-dot${active === s.id ? ' is-on' : ''}${stepIndex > idx ? ' is-past' : ''}`}
+            aria-label={`${s.label} — étape ${idx + 1} sur ${SCREENS.length}`}
+            aria-current={active === s.id ? 'step' : undefined}
+            onClick={() => goTo(s.id)}
+          >
+            <span className="story-dot-chip" aria-hidden="true">
+              <span className="story-dot-inner">
+                <span className="story-dot-num">{idx + 1}</span>
               </span>
-              <span className="line line-2 grad">
-                {line2 || '\u00A0'}
-                {activeLine === 2 ? <span className="caret caret-grad" aria-hidden="true" /> : null}
+            </span>
+            <span className="story-dot-label">{s.navLabel}</span>
+          </button>
+        ))}
+      </aside>
+
+      {/* Vidéo plein viewport : net sur l’écran 1, floutée + teintée sur les suivants */}
+      <div className="story-global-video" aria-hidden="true">
+        <div className="story-manifesto-video-inner story-global-video-inner">
+          <div className="story-manifesto-poster" style={{ backgroundImage: `url(${heroPosterUrl})` }} />
+          {!prefersReducedMotion && !heroStreamFallback ? (
+            <video
+              ref={heroVideoRef}
+              className="story-manifesto-file-video"
+              src={heroResolvedMp4Src}
+              poster={heroPosterUrl}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onError={() => setHeroStreamFallback(true)}
+            />
+          ) : null}
+          {!prefersReducedMotion && heroStreamFallback ? (
+            <iframe
+              className="story-manifesto-iframe"
+              src={heroYoutubeEmbedSrc}
+              title="Aperçu Antananarivo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen={false}
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <main className="story-scroller" ref={scrollerRef}>
+        {/* Écran 1 — Manifeste plein écran */}
+        <section className="story-screen story-screen--manifesto" data-screen="manifesto">
+          <div className="story-screen-content story-manifesto">
+            <span className="story-eyebrow story-eyebrow--tana-city" data-anim="fade-up">
+              <span className="story-eyebrow-dot" /> République de Madagascar · dispositif Anamboatra (MTP)
+            </span>
+            <p className="story-manifesto-intro" data-anim="fade-up" data-delay="50">
+              <span lang="mg">Renivohitr&apos;i Madagasikara · Tanànan&apos;Antananarivo</span>
+              <br />
+              <span className="story-manifesto-subfr" lang="fr">
+                Capitale — filière SIG · SGRI · Ministère des Travaux Publics.
+              </span>
+            </p>
+            <h1 className="story-h1" data-anim="fade-up" data-delay="100">
+              <span className="story-h1-line">Signalement, instruction et mise à jour des statuts</span>
+              <span className="story-h1-line story-h1-grad story-gradient-flow">
+                Une cartographie nationale tenue sous responsabilité du MTP
               </span>
             </h1>
-            <p className="landing-sub" data-reveal data-reveal-delay="100">
-              La plateforme cartographique officielle qui orchestre signalements citoyens,
-              agents de patrouille et équipes d'intervention en temps réel — du quartier au
-              ministère, sur une seule carte vivante.
+            <p className="story-lede" data-anim="fade-up" data-delay="250">
+              Les dossiers géolocalisés transitent depuis la carte publique ou les applications terrain vers les niveaux MTP,
+              QG et exécution. Chaque statut reflète une décision ou un constat dans le dossier officiel du dispositif.
             </p>
-            <div className="landing-cta-row" data-reveal data-reveal-delay="200">
-              <Link to="/travaux" className="landing-cta-primary">
-                Regarder les travaux en cours
-                <span className="arrow">→</span>
+            <div className="story-cta-row" data-anim="fade-up" data-delay="400">
+              <Link to="/travaux" className="story-cta-primary">
+                Consultation cartographique
+                <span className="story-cta-arrow">→</span>
               </Link>
               {user ? (
-                <Link to="/app" className="landing-cta-ghost">
-                  Ouvrir mon espace
+                <Link to="/app" className="story-cta-ghost">
+                  Espace métier connecté
                 </Link>
-              ) : (
-                <Link to="/connexion" className="landing-cta-ghost">
-                  Connexion travailleurs
-                </Link>
-              )}
+              ) : null}
             </div>
-            <div className="landing-meta" data-reveal data-reveal-delay="300">
-              <div>
-                <strong>24/7</strong>
-                <span>supervision continue</span>
-              </div>
-              <div>
-                <strong>4</strong>
-                <span>spécialités d'intervention</span>
-              </div>
-              <div>
-                <strong>0</strong>
-                <span>signalement perdu</span>
-              </div>
-            </div>
-            <a href="#constat" className="landing-scroll-cue" aria-label="Descendre">
-              <span />
-            </a>
-          </div>
-
-          <aside className="landing-hero-preview" data-reveal data-reveal-delay="200" aria-hidden="true">
-            <div className="landing-mapPreview">
-              <div className="landing-mapPreview-grid" />
-              <div className="landing-mapPreview-scan" />
-              <div className="landing-mapPreview-mada">
-                <svg viewBox="-6 -6 112 212" preserveAspectRatio="xMidYMid meet">
-                  <defs>
-                    <linearGradient id="madaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(0, 126, 58, 0.34)" />
-                      <stop offset="100%" stopColor="rgba(11, 61, 145, 0.24)" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d={MADAGASCAR_PATH}
-                    fill="url(#madaGradient)"
-                    stroke="#0b3d91"
-                    strokeWidth="0.7"
-                    strokeLinejoin="round"
-                  />
-                  {MAP_PREVIEW_PINS.map((pin) => (
-                    <g key={pin.name} transform={`translate(${pin.x} ${pin.y})`}>
-                      <circle
-                        className="landing-mapPin-radarSvg"
-                        r="3"
-                        fill={pin.color}
-                        style={{ animationDelay: `${pin.delay}s` } as React.CSSProperties}
-                      />
-                      <circle r="1.8" fill={pin.color} stroke="#ffffff" strokeWidth="0.7" />
-                      <title>{pin.name}</title>
-                    </g>
-                  ))}
-                </svg>
-              </div>
-              <div className="landing-mapPreview-badge">
-                <span className="landing-mapPreview-live" />
-                Anamboatra Maps · LIVE
-              </div>
-            </div>
-          </aside>
-        </section>
-
-        {/* SECTION : LE CONSTAT */}
-        <section className="landing-section" id="constat">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Le constat</span>
-            <h2>Trois fractures qui freinent la maintenance publique.</h2>
-            <p className="landing-section-lead">
-              Avant Anamboatra, signaler une anomalie d'infrastructure relevait souvent de
-              l'acte de foi. Le Ministère reconnaît trois obstacles structurels qu'il s'engage
-              aujourd'hui à lever.
-            </p>
-          </header>
-          <div className="landing-cards-3">
-            <article className="landing-card" data-reveal data-reveal-delay="100">
-              <span className="landing-card-num">01</span>
-              <h3>Latence administrative</h3>
-              <p>
-                Un nid-de-poule signalé pouvait attendre des semaines avant qu'une équipe ne
-                se déplace, faute d'information centralisée. La preuve visuelle se perdait
-                entre les bureaux.
-              </p>
-            </article>
-            <article className="landing-card" data-reveal data-reveal-delay="200">
-              <span className="landing-card-num">02</span>
-              <h3>Fragmentation territoriale</h3>
-              <p>
-                Arrondissements, routes nationales, services techniques — chaque entité
-                travaillait en silo. Personne ne voyait la ville dans son ensemble, encore
-                moins en temps réel.
-              </p>
-            </article>
-            <article className="landing-card" data-reveal data-reveal-delay="300">
-              <span className="landing-card-num">03</span>
-              <h3>Silence après signalement</h3>
-              <p>
-                Le citoyen signalait, puis n'entendait plus parler de rien. Sans retour,
-                sans visibilité sur les travaux en cours, la confiance dans le service
-                public s'érodait silencieusement.
-              </p>
-            </article>
+            <button
+              type="button"
+              className="story-scroll-hint"
+              aria-label={`Section suivante : ${SCREENS[1]!.label}`}
+              onClick={() => goTo('carte')}
+              data-anim="fade-up"
+              data-delay="600"
+            >
+              Section suivante
+              <span className="story-scroll-cue" aria-hidden="true">
+                <span />
+              </span>
+            </button>
           </div>
         </section>
 
-        {/* SECTION : NOTRE PROMESSE */}
-        <section className="landing-section landing-section-quote" id="promesse">
-          <div className="landing-quote-watermark" aria-hidden="true">
-            <svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">
-              <path d={MADAGASCAR_PATH} />
-            </svg>
+        {/* Écran 2 — La carte vivante */}
+        <section className="story-screen story-screen--carte" data-screen="carte">
+          <div className="story-screen-tint story-screen-tint--carte" aria-hidden="true" />
+          <div className="story-screen-bg" aria-hidden="true">
+            <span className="story-grid story-grid--bright" />
           </div>
-          <div className="landing-quote-block" data-reveal>
-            <span className="landing-quote-mark" aria-hidden="true">
-              «
-            </span>
-            <p className="landing-quote-text">
-              L'État s'engage à transformer chaque anomalie en donnée, chaque donnée en
-              intervention coordonnée, et chaque intervention en preuve publique vérifiable.
-            </p>
-            <p className="landing-quote-author">
-              <strong>Ministère des Travaux Publics</strong>
-              <span>Doctrine Anamboatra 2035 — Gouvernance par la donnée</span>
-            </p>
+          <div className="story-screen-content story-carte">
+            <div className="story-carte-text story-panel story-panel--carte">
+              <span className="story-eyebrow" data-anim="fade-up">
+                <span className="story-eyebrow-dot story-eyebrow-dot--blue" /> Calque géographique unique
+              </span>
+              <h2 className="story-h2" data-anim="fade-up" data-delay="120">
+                Une vue nationale des territoires et des axes suivis&nbsp;<br />
+                <span className="story-h2-grad">Instruction et publication selon périmètres MTP</span>
+              </h2>
+              <p className="story-lede story-lede--compact" data-anim="fade-up" data-delay="240">
+                Les géométries et statuts figurant sur cette carte résultent de saisies et validations effectuées
+                par les acteurs désignés. La consultation reproduit ces données institutionnelles, pas des sources tiers.
+              </p>
+              <ul className="story-stats" data-anim="fade-up" data-delay="360">
+                <li>
+                  <strong>Réseau</strong>
+                  <span>diffusion des mises à jour de statut entre postes MTP, QG et applications terrain autorisées</span>
+                </li>
+                <li>
+                  <strong>Géolocalisation</strong>
+                  <span>chaque dossier actif rattache coordonnées et zone administrative</span>
+                </li>
+                <li>
+                  <strong>Habilitation</strong>
+                  <span>référentiel conservé hors procédés parallèles sans mandat MTP</span>
+                </li>
+              </ul>
+            </div>
+            <div className="story-carte-visual" data-anim="zoom-in" data-delay="180" aria-hidden="true">
+              <StoryMadagascarMapCard reducedMotion={prefersReducedMotion} />
+            </div>
           </div>
-          <p className="landing-section-lead landing-quote-lead" data-reveal data-reveal-delay="200">
-            Anamboatra n'est pas une application de plus. C'est l'infrastructure numérique
-            commune à tous les acteurs de la maintenance publique malgache : citoyens,
-            agents de patrouille, équipes d'intervention spécialisées et administrateurs de
-            quartier général.
-          </p>
         </section>
 
-        {/* SECTION : ANAMBOATRA PARLE VOTRE LANGUE */}
-        <section className="landing-section landing-section-mada" id="culture">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Anamboatra parle votre langue</span>
-            <h2>
-              <span className="landing-mg-title">Tsy mba mahay miaina irery ny olona.</span>
-              <span className="landing-mg-trans">« Personne ne vit seul. »</span>
-            </h2>
-            <p className="landing-section-lead">
-              Un service public ne s'impose pas. Il se construit avec ceux qu'il sert.
-              Anamboatra repose sur trois valeurs malgaches qui guident chaque ligne de code,
-              chaque décision du QG, chaque intervention sur le terrain.
-            </p>
-          </header>
-          <div className="landing-cards-3">
-            <article className="landing-madaCard" data-reveal data-reveal-delay="100">
-              <span className="landing-madaCard-stripe" aria-hidden="true" />
-              <h3>Fihavanana</h3>
-              <p className="landing-madaCard-fr">Le lien</p>
-              <p>
-                L'esprit de cohésion qui relie l'agent au citoyen, le QG au quartier, la
-                capitale aux régions. Anamboatra rend visible ce lien.
-              </p>
-            </article>
-            <article className="landing-madaCard" data-reveal data-reveal-delay="200">
-              <span className="landing-madaCard-stripe" aria-hidden="true" />
-              <h3>Fanjakana</h3>
-              <p className="landing-madaCard-fr">L'État qui agit</p>
-              <p>
-                L'État rend des comptes par la donnée, par la preuve, par la transparence.
-                Chaque ticket est une promesse tenue ou tracée publiquement.
-              </p>
-            </article>
-            <article className="landing-madaCard" data-reveal data-reveal-delay="300">
-              <span className="landing-madaCard-stripe" aria-hidden="true" />
-              <h3>Tanindrazana</h3>
-              <p className="landing-madaCard-fr">Notre patrimoine</p>
-              <p>
-                Routes, lumières, eau — tout ce qui fait tenir le pays. Prendre soin de
-                l'infrastructure, c'est prendre soin de Madagascar.
-              </p>
-            </article>
+        {/* Écran 3 — Quatre regards */}
+        <section className="story-screen story-screen--roles" data-screen="roles">
+          <div className="story-screen-tint story-screen-tint--roles" aria-hidden="true" />
+          <div className="story-screen-bg" aria-hidden="true">
+            <span className="story-orb story-orb-d" />
+            <span className="story-orb story-orb-e" />
           </div>
-
-          <div className="landing-marquee" aria-hidden="true" data-reveal data-reveal-delay="400">
-            <div className="landing-marquee-track">
-              {[...CITIES, ...CITIES].map((city, idx) => (
-                <span key={`${city.name}-${idx}`} className={`landing-marquee-item pin-${city.color}`}>
-                  <span className="landing-marquee-pin" />
-                  <strong>{city.name}</strong>
-                  <small>{city.tag}</small>
+          <div className="story-screen-content story-roles">
+            <div className="story-roles-intro story-panel story-panel--roles">
+              <header className="story-roles-head">
+                <span className="story-eyebrow" data-anim="fade-up">
+                  <span className="story-eyebrow-dot story-eyebrow-dot--green" /> Chaîne MTP — patrouilles — équipes — QG
                 </span>
-              ))}
+                <h2 className="story-h2 story-h2--center" data-anim="fade-up" data-delay="120">
+                  Répartition fonctionnelle des statuts&nbsp;<br />
+                  <span className="story-h2-grad">du signalement jusqu’à la clôture</span>
+                </h2>
+              </header>
+            </div>
+            <div className="story-roles-grid">
+              <article className="story-role role-citoyen" data-anim="slide-up" data-delay="100">
+                <span className="story-role-num">01</span>
+                <h3>Grand public · consultation</h3>
+                <p>
+                  Consultation conforme aux éléments mis à disposition par le MTP. Une observation peut être transmise
+                  depuis la carte publique ; après saisie, le dossier est instruit uniquement dans les circuits
+                  patrouille et QG. Aucune opération carte ne se substitue à une décision publiée officiellement.
+                </p>
+              </article>
+              <article className="story-role role-agent" data-anim="slide-up" data-delay="220">
+                <span className="story-role-num">02</span>
+                <h3>Patrouille · terrain</h3>
+                <p>
+                  Qualification géolocalisée des dossiers du périmètre assigné&nbsp;: comptes rendus, pièces photo
+                  horodatées et synchronisation sur le référentiel partagé avec le QG.
+                </p>
+              </article>
+              <article className="story-role role-equipe" data-anim="slide-up" data-delay="340">
+                <span className="story-role-num">03</span>
+                <h3>Intervention · exécution</h3>
+                <p>
+                  Exécution des missions planifiées, documentation des chantiers terminés ou reportés ; les statuts
+                  affichés reflètent l’état courant communiqué par l’unité désignée.
+                </p>
+              </article>
+              <article className="story-role role-qg" data-anim="slide-up" data-delay="460">
+                <span className="story-role-num">04</span>
+                <h3>QG · pilotage ministériel</h3>
+                <p>
+                  Pilotage territorial&nbsp;: rattachements, mesures agrégées et coordination avec les cellules MTP
+                  pour faire circuler décisions statutaires jusqu’aux acteurs mobiles.
+                </p>
+              </article>
             </div>
           </div>
         </section>
 
-        {/* SECTION : UNE CARTE, QUATRE REGARDS */}
-        <section className="landing-section" id="anamboatra-maps">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Anamboatra Maps</span>
-            <h2>Une seule carte. Quatre regards. Aucune zone d'ombre.</h2>
-            <p className="landing-section-lead">
-              Au cœur du dispositif, une carte unifiée de type Google Maps, partagée par
-              tous les acteurs. Chaque rôle voit la même géographie, mais une couche
-              d'information adaptée à sa mission.
+        {/* Écran 4 — Agir */}
+        <section className="story-screen story-screen--agir" data-screen="agir">
+          <div className="story-screen-tint story-screen-tint--agir" aria-hidden="true" />
+          <div className="story-screen-bg" aria-hidden="true">
+            <span className="story-orb story-orb-f" />
+            <span className="story-orb story-orb-g" />
+          </div>
+          <div className="story-screen-content story-agir">
+            <span className="story-eyebrow story-eyebrow--light" data-anim="fade-up">
+              <span className="story-eyebrow-dot story-eyebrow-dot--red" /> Publication des données MTP
+            </span>
+            <h2 className="story-h2 story-h2--center story-h2--light" data-anim="fade-up" data-delay="120">
+              Consultation et signalement officiels
+            </h2>
+            <p className="story-lede story-lede--center story-lede--light" data-anim="fade-up" data-delay="240">
+              La carte ne reproduit que ce que le MTP autorise en consultation publique. Toute proposition d’anomalie
+              transite par la page « carte publique ». Le référentiel géographique de référence reste réservé aux comptes
+              habilités.
             </p>
-          </header>
-          <div className="landing-cards-4">
-            <article className="landing-roleCard role-citoyen" data-reveal data-reveal-delay="100">
-              <header>
-                <span className="landing-roleDot" />
-                <h3>Citoyen</h3>
-              </header>
-              <p>
-                Voit les travaux confirmés et terminés près de chez lui. Peut suggérer une
-                anomalie en 30 secondes, sans créer de compte.
-              </p>
-            </article>
-            <article className="landing-roleCard role-agent" data-reveal data-reveal-delay="200">
-              <header>
-                <span className="landing-roleDot" />
-                <h3>Agent de patrouille</h3>
-              </header>
-              <p>
-                Signale les anomalies de sa zone avec photo géolocalisée vérifiée.
-                Consulte les suggestions citoyennes pour prioriser ses tournées.
-              </p>
-            </article>
-            <article className="landing-roleCard role-equipe" data-reveal data-reveal-delay="300">
-              <header>
-                <span className="landing-roleDot" />
-                <h3>Équipe d'intervention</h3>
-              </header>
-              <p>
-                Reçoit ses missions sur la carte, navigue jusqu'au site avec le GPS
-                intégré, et clôture chaque chantier par une photo de preuve.
-              </p>
-            </article>
-            <article className="landing-roleCard role-qg" data-reveal data-reveal-delay="400">
-              <header>
-                <span className="landing-roleDot" />
-                <h3>Administrateur QG</h3>
-              </header>
-              <p>
-                Confirme les signalements, assigne la bonne spécialité, gère ses agents et
-                pilote l'ensemble du Kanban depuis une interface plein écran.
-              </p>
-            </article>
+            <div className="story-cta-row story-cta-row--center" data-anim="fade-up" data-delay="360">
+              <Link to="/travaux" className="story-cta-primary story-cta-primary--xl">
+                Ouvrir la carte publique officielle
+                <span className="story-cta-arrow">→</span>
+              </Link>
+              {user ? (
+                <Link to="/app" className="story-cta-ghost story-cta-ghost--light">
+                  Espace métier connecté
+                </Link>
+              ) : null}
+            </div>
+            <footer className="story-foot" data-anim="fade-up" data-delay="500">
+              <span>
+                <strong>Ministère des Travaux Publics</strong> — République de Madagascar
+              </span>
+              <span>Anamboatra · coordination opérationnelle</span>
+              <span>© 2026 — République de Madagascar</span>
+            </footer>
           </div>
         </section>
-
-        {/* SECTION : CYCLE DE VIE */}
-        <section className="landing-section landing-section-cycle" id="cycle">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Cycle de vie d'un ticket</span>
-            <h2>Du signalement à la preuve publique, en cinq étapes.</h2>
-            <p className="landing-section-lead">
-              Chaque ticket suit un cycle strict, journalisé pour l'audit. Les couleurs
-              changent en moins de 2 secondes pour tous les utilisateurs connectés, via
-              WebSocket.
-            </p>
-          </header>
-          <ol className="landing-cycle">
-            <li className="landing-cycle-step step-1 has-radar" data-reveal data-reveal-delay="100">
-              <span className="landing-cycle-dot" />
-              <span className="landing-cycle-label">Étape 1</span>
-              <h4>En attente de confirmation</h4>
-              <p>L'agent de patrouille soumet une anomalie avec photo et GPS.</p>
-            </li>
-            <li className="landing-cycle-step step-2" data-reveal data-reveal-delay="200">
-              <span className="landing-cycle-dot" />
-              <span className="landing-cycle-label">Étape 2</span>
-              <h4>Réparation prévue</h4>
-              <p>Le QG confirme, choisit la spécialité et assigne une équipe.</p>
-            </li>
-            <li className="landing-cycle-step step-3" data-reveal data-reveal-delay="300">
-              <span className="landing-cycle-dot" />
-              <span className="landing-cycle-label">Étape 3</span>
-              <h4>En réparation</h4>
-              <p>L'équipe arrive sur site, démarre l'intervention, position visible.</p>
-            </li>
-            <li className="landing-cycle-step step-4" data-reveal data-reveal-delay="400">
-              <span className="landing-cycle-dot" />
-              <span className="landing-cycle-label">Étape 4</span>
-              <h4>Terminé</h4>
-              <p>Photo de clôture obligatoire, mise à jour publique immédiate.</p>
-            </li>
-            <li className="landing-cycle-step step-5" data-reveal data-reveal-delay="500">
-              <span className="landing-cycle-dot" />
-              <span className="landing-cycle-label">Étape 5</span>
-              <h4>Clôturé</h4>
-              <p>Archivé pour audit, traçabilité absolue conservée.</p>
-            </li>
-          </ol>
-        </section>
-
-        {/* SECTION : MÉCANISMES DE CONFIANCE */}
-        <section className="landing-section" id="confiance">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Confiance citoyenne</span>
-            <h2>Trois verrous techniques pour garantir la parole publique.</h2>
-            <p className="landing-section-lead">
-              Une carte qui dit la vérité ne peut être ni truquée, ni dupliquée, ni
-              oubliée. Trois mécanismes inscrits dans le code en font foi.
-            </p>
-          </header>
-          <div className="landing-cards-3">
-            <article className="landing-trustCard" data-reveal data-reveal-delay="100">
-              <div className="landing-trustIcon">⚙</div>
-              <h3>Vérification EXIF</h3>
-              <p>
-                Chaque photo de signalement est analysée pour vérifier sa géolocalisation
-                d'origine. Aucune image rejouée ne peut entrer dans le système.
-              </p>
-            </article>
-            <article className="landing-trustCard" data-reveal data-reveal-delay="200">
-              <div className="landing-trustIcon">⛨</div>
-              <h3>Accès gouverné par le rôle</h3>
-              <p>
-                Super-administrateur, QG, agent de patrouille, équipe
-                d'intervention ou citoyen : chaque action est filtrée par le
-                rôle, et chaque ticket reste cantonné à sa commune.
-              </p>
-            </article>
-            <article className="landing-trustCard" data-reveal data-reveal-delay="300">
-              <div className="landing-trustIcon">▤</div>
-              <h3>Journal d'audit immuable</h3>
-              <p>
-                Chaque transition de statut est horodatée et conservée. La traçabilité
-                complète d'un chantier reste accessible, des années après sa clôture.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        {/* SECTION : ENGAGEMENTS CHIFFRÉS */}
-        <section className="landing-section landing-section-pledges" id="missions">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Engagements chiffrés</span>
-            <h2>Notre service public, mesuré au cordeau.</h2>
-            <p className="landing-section-lead">
-              Le Ministère s'engage publiquement sur des indicateurs vérifiables. Ils sont
-              inscrits dans le contrat de service Anamboatra.
-            </p>
-          </header>
-          <div className="landing-pledges">
-            <article className="landing-pledge" data-reveal data-reveal-delay="100">
-              <strong>&lt; 2 s</strong>
-              <span>propagation d'un changement de statut sur la carte de tous les utilisateurs</span>
-            </article>
-            <article className="landing-pledge" data-reveal data-reveal-delay="200">
-              <strong>100 %</strong>
-              <span>des tickets auditables avec photo, horodatage et géolocalisation</span>
-            </article>
-            <article className="landing-pledge" data-reveal data-reveal-delay="300">
-              <strong>0</strong>
-              <span>signalement citoyen perdu, fusion automatique avec les tickets existants</span>
-            </article>
-            <article className="landing-pledge" data-reveal data-reveal-delay="400">
-              <strong>24/7</strong>
-              <span>supervision active, équipes d'astreinte mobilisables en continu</span>
-            </article>
-          </div>
-        </section>
-
-        {/* SECTION : POUR LE CITOYEN */}
-        <section className="landing-section" id="citoyen">
-          <header className="landing-section-head" data-reveal>
-            <span className="landing-section-eyebrow">Pour vous, citoyen</span>
-            <h2>Trois gestes pour participer à la ville.</h2>
-            <p className="landing-section-lead">
-              Vous n'avez besoin de rien : pas de compte, pas de téléchargement, pas de
-              démarche. Juste votre regard sur votre quartier.
-            </p>
-          </header>
-          <div className="landing-steps">
-            <article className="landing-step" data-reveal data-reveal-delay="100">
-              <span className="landing-stepNum">1</span>
-              <h3>Ouvrez la carte publique</h3>
-              <p>Aucun compte requis. La carte officielle des travaux est accessible à tous, immédiatement.</p>
-            </article>
-            <article className="landing-step" data-reveal data-reveal-delay="200">
-              <span className="landing-stepNum">2</span>
-              <h3>Voyez ce qui se passe près de chez vous</h3>
-              <p>Marqueurs orange, bleus et verts : chaque couleur dit où en est la réparation, en direct.</p>
-            </article>
-            <article className="landing-step" data-reveal data-reveal-delay="300">
-              <span className="landing-stepNum">3</span>
-              <h3>Suggérez une anomalie</h3>
-              <p>Un point sur la carte, une description, c'est envoyé. Votre signalement nourrit l'action publique.</p>
-            </article>
-          </div>
-        </section>
-
-        {/* BANDE CTA FINALE */}
-        <section className="landing-band" data-reveal>
-          <h2>Voir la ville en mouvement.</h2>
-          <p className="landing-band-sub">
-            Aucun compte requis pour consulter la carte publique des travaux confirmés.
-          </p>
-          <Link to="/travaux" className="landing-cta-primary">
-            Ouvrir la carte publique
-            <span className="arrow">→</span>
-          </Link>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="landing-foot" id="partenaires">
-          <div className="landing-foot-col">
-            <strong>Ministère des Travaux Publics</strong>
-            <span>République de Madagascar — Anamboatra 2035</span>
-          </div>
-          <div className="landing-foot-col">
-            <span>Plateforme SGRI</span>
-            <span>Système de Gestion et Réponse aux Incidents</span>
-          </div>
-          <div className="landing-foot-col">
-            <span>© 2026 — Tous droits réservés</span>
-            <span>Service public numérique</span>
-          </div>
-        </footer>
       </main>
     </div>
   );

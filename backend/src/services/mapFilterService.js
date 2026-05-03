@@ -138,6 +138,8 @@ async function buildMapPayload(principal) {
         kind: 'suggestion',
         typeSuggere: s.typeSuggere,
         dateSoumission: s.dateSoumission,
+        assignedPatrolUserId: s.assignedPatrolUserId ? String(s.assignedPatrolUserId) : null,
+        dispatched: Boolean(s.assignedPatrolUserId && s.dispatchedAt),
       },
     };
   });

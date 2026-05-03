@@ -41,15 +41,20 @@ async function applyTicketPatch(ticket, body, actorUser) {
       if (!Array.isArray(equipeIds) || equipeIds.length === 0) {
         throw new Error('equipeUserIds requis pour affecter une équipe');
       }
-      const jiramaAffectes = await User.count({
+      const jiramaUsers = await User.findAll({
         where: {
           id: { [Op.in]: equipeIds },
           role: RoleEnum.EQUIPE_INTERVENTION,
           specialite: SpecialiteEnum.JIRAMA,
         },
+        attributes: ['id', 'zoneId'],
       });
-      if (jiramaAffectes > 0) {
-        throw new Error("Les équipes JIRAMA ne peuvent pas être affectées depuis le QG.");
+      for (const j of jiramaUsers) {
+        if (String(j.zoneId) !== String(ticket.zoneId)) {
+          throw new Error(
+            'Les équipes JIRAMA affectables depuis le QG doivent être rattachées à votre zone.',
+          );
+        }
       }
       ticket.statut = StatutEnum.REPARATION_PREVUE;
       ticket.visiblePublic = true;

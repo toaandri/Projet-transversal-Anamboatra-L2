@@ -13,10 +13,12 @@ export async function connectMapSocket(onEvent: () => void): Promise<() => void>
   socket.on('ticket:created', bump);
   socket.on('ticket:updated', bump);
   socket.on('suggestion:created', bump);
+  socket.on('suggestion:terrain-cloture', bump);
   return () => {
     socket.off('ticket:created', bump);
     socket.off('ticket:updated', bump);
     socket.off('suggestion:created', bump);
+    socket.off('suggestion:terrain-cloture', bump);
     socket.disconnect();
   };
 }

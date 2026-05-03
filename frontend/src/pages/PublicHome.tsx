@@ -14,9 +14,14 @@ const TYPE_COLORS: Record<TypeInfrastructure, string> = {
 
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
   { v: 'ROUTE', l: 'Route', color: TYPE_COLORS.ROUTE },
-  { v: 'ELECTRICITE', l: 'Electricite', color: TYPE_COLORS.ELECTRICITE },
+  { v: 'ELECTRICITE', l: 'Électricité', color: TYPE_COLORS.ELECTRICITE },
   { v: 'EAU', l: 'Eau', color: TYPE_COLORS.EAU },
 ];
+
+function initialCitizenSideOpen(): boolean {
+  if (typeof window === 'undefined') return true;
+  return !window.matchMedia('(max-width: 1200px), (max-aspect-ratio: 11/10)').matches;
+}
 
 export function PublicHome() {
   const { user } = useAuth();
@@ -33,7 +38,16 @@ export function PublicHome() {
   const [lng, setLng] = useState<number | null>(null);
   const [pick, setPick] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [sideOpen, setSideOpen] = useState(true);
+  const [sideOpen, setSideOpen] = useState(initialCitizenSideOpen);
+
+  useEffect(() => {
+    if (!sideOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setSideOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sideOpen]);
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +59,9 @@ export function PublicHome() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
   useMapSocket(load);
 
   useEffect(() => {
@@ -54,16 +70,36 @@ export function PublicHome() {
         const { zones: z } = await api.publicZones();
         setZones(z);
         setZoneId((prev) => (prev ? prev : z[0]?.id ?? ''));
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })();
   }, []);
+
+  const cancelSuggestion = useCallback(() => {
+    setDescription('');
+    setPseudo('');
+    setLat(null);
+    setLng(null);
+    setPick(false);
+    setTypeSuggere('ROUTE');
+    setZoneId(zones[0]?.id ?? '');
+    setErr(null);
+    setOk(null);
+  }, [zones]);
 
   async function submitSuggestion(e: React.FormEvent) {
     e.preventDefault();
     setOk(null);
     setErr(null);
-    if (lat === null || lng === null) { setErr('Indiquez un point sur la carte.'); return; }
-    if (!zoneId) { setErr('Choisissez une zone.'); return; }
+    if (lat === null || lng === null) {
+      setErr('Une position géographique sur la carte est obligatoire.');
+      return;
+    }
+    if (!zoneId) {
+      setErr('Sélection de la zone administrative obligatoire.');
+      return;
+    }
     setSubmitting(true);
     try {
       await api.publicSuggestion({
@@ -74,9 +110,12 @@ export function PublicHome() {
         zoneId,
         pseudoCitoyen: pseudo || undefined,
       });
-      setOk('Suggestion envoyee. Merci.');
+      setOk('Transmission reçue. La proposition sera traitée selon le circuit officiel.');
       setDescription('');
       setPseudo('');
+      setLat(null);
+      setLng(null);
+      setPick(false);
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
@@ -85,257 +124,200 @@ export function PublicHome() {
     }
   }
 
-  /* ---- styles inline partagés ---- */
-  const card: React.CSSProperties = {
-    background: 'var(--panel)',
-    border: '1px solid var(--border)',
-    borderRadius: 12,
-    padding: '12px 14px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  };
-  const eyebrow: React.CSSProperties = {
-    fontSize: 9,
-    letterSpacing: '1.4px',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    color: 'var(--muted)',
-  };
-  const fieldStyle: React.CSSProperties = {
-    background: 'var(--bg)',
-    color: 'var(--text)',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    padding: '9px 12px',
-    fontSize: 14,
-    width: '100%',
-    outline: 'none',
-    fontFamily: 'inherit',
-  };
-
   return (
-    <div className="page dashboard">
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo" />
-          <div>
-            <strong>Anamboatra Maps</strong>
-            <div className="muted small">Portail public</div>
-          </div>
-        </div>
-        <nav className="nav">
-          {user ? (
-            <Link to="/app" className="btn btn-ghost">Espace connecte</Link>
-          ) : (
-            <Link to="/connexion" className="btn btn-primary">Connexion</Link>
-          )}
-        </nav>
-      </header>
-
-      <div className="top-actions">
-        <Link to="/" className="btn btn-ghost">Accueil</Link>
-        {user ? (
-          <Link to="/app" className="btn btn-ghost">Espace connecte</Link>
-        ) : (
-          <Link to="/connexion" className="btn btn-ghost">Connexion</Link>
-        )}
-      </div>
-
+    <div className="page dashboard dashboard--public-carto">
       <div className={`dash-grid${sideOpen ? '' : ' side-closed'}`}>
+        {sideOpen ? (
+          <button
+            type="button"
+            className="public-carto-backdrop"
+            aria-label="Fermer le menu"
+            onClick={() => setSideOpen(false)}
+          />
+        ) : null}
+
         <button
           type="button"
-          className="side-toggle"
+          className="side-toggle side-toggle-public"
           onClick={() => setSideOpen((o) => !o)}
-          aria-label={sideOpen ? 'Reduire le panneau' : 'Afficher le panneau'}
+          aria-expanded={sideOpen}
+          aria-controls="public-carto-side"
+          aria-label={sideOpen ? 'Replier le panneau latéral' : 'Afficher le panneau latéral'}
+          title={sideOpen ? 'Replier' : 'Afficher le panneau'}
         >
-          {sideOpen ? '\u2039' : '\u203a'}
+          <span className="side-toggle-glyph">{sideOpen ? '‹' : '›'}</span>
+          <span className="side-toggle-label">{sideOpen ? 'Fermer' : 'Menu'}</span>
         </button>
 
-        <aside className="panel side" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}>
-
-          {/* En-tete identite */}
-          <div style={{
-            padding: '14px 18px 12px',
-            background: 'var(--panel)',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
-          }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 12,
-              background: 'var(--panel)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              {/* Mini drapeau Madagascar */}
-              <div style={{ width: 22, height: 16, borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,0,0,0.08)' }}>
-                <div style={{ flex: 1, background: '#ffffff' }} />
-                <div style={{ flex: 1, background: '#c8102e' }} />
-                <div style={{ flex: 1, background: '#007e3a' }} />
-              </div>
-            </div>
-            <div>
-              <div style={eyebrow}>Republique de Madagascar</div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Anamboatra Maps</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Carte publique</div>
+        <aside className="panel side" id="public-carto-side" aria-hidden={!sideOpen}>
+          <div className="side-header">
+            <span className="qg-mark" aria-hidden="true">
+              <span className="qg-mark-flag" />
+              <span className="qg-mark-pin" />
+            </span>
+            <div className="qg-header-text">
+              <small>Plateforme Anamboatra</small>
+              <strong>Carte publique</strong>
+              <div className="muted small">Signalement hors compte — coordonnées obligatoires</div>
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-            <div>
-              <div style={{ ...eyebrow, marginBottom: 4 }}>Carte des travaux visibles</div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-                Les signalements en attente ne sont pas affiches. Proposez une anomalie geolocalisee ci-dessous.
-              </p>
-            </div>
-
-            {err ? (
-              <div style={{ background: 'var(--redSoft)', color: 'var(--red)', border: '1px solid #f5c6cb', borderRadius: 10, padding: '10px 12px', fontSize: 13 }}>{err}</div>
-            ) : null}
-            {ok ? (
-              <div style={{ background: 'var(--accentSoft)', color: 'var(--accent2)', border: '1px solid var(--borderStrong)', borderRadius: 10, padding: '10px 12px', fontSize: 13 }}>{ok}</div>
-            ) : null}
-
-            <form onSubmit={submitSuggestion} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-              {/* Etape 1 — Type chips */}
-              <div style={card}>
-                <div style={eyebrow}>Etape 1</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>
-                  Type d'infrastructure
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {TYPES.map((t) => {
-                    const sel = typeSuggere === t.v;
-                    return (
-                      <button
-                        key={t.v}
-                        type="button"
-                        onClick={() => setTypeSuggere(t.v)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          padding: '7px 14px', borderRadius: 999,
-                          border: `1.5px solid ${sel ? t.color : 'var(--border)'}`,
-                          background: sel ? t.color : 'var(--panel)',
-                          color: sel ? '#fff' : 'var(--textSoft)',
-                          fontWeight: sel ? 700 : 500, fontSize: 13, cursor: 'pointer',
-                        }}
-                      >
-                        <span style={{ width: 8, height: 8, borderRadius: 4, background: sel ? '#fff' : t.color, flexShrink: 0 }} />
-                        {t.l}
-                      </button>
-                    );
-                  })}
-                </div>
+          <section className="qg-section public-side-nav" aria-label="Navigation">
+            <header className="qg-section-head">
+              <span className="qg-section-eyebrow">Navigation</span>
+              <div className="qg-section-titlerow">
+                <h3>Liens</h3>
               </div>
+            </header>
+            <div className="qg-actions">
+              <Link to="/" className="btn btn-ghost">
+                Présentation publique
+              </Link>
+              {user ? (
+                <Link to="/app" className="btn btn-primary">
+                  Espace métier
+                </Link>
+              ) : null}
+            </div>
+          </section>
 
-              {/* Etape 2 — Zone */}
-              <div style={card}>
-                <div style={eyebrow}>Etape 2 — Zone concernee</div>
-                <select
-                  value={zoneId}
-                  onChange={(e) => setZoneId(e.target.value)}
-                  required
-                  style={fieldStyle}
-                >
-                  <option value="">-- Choisissez une zone --</option>
+          {err ? <p className="alert error">{err}</p> : null}
+          {ok ? <p className="alert success">{ok}</p> : null}
+
+          <section className="qg-section">
+            <header className="qg-section-head">
+              <span className="qg-section-eyebrow">Lecture</span>
+              <div className="qg-section-titlerow">
+                <h3>Information affichée</h3>
+              </div>
+            </header>
+            <p className="muted small" style={{ margin: 0, lineHeight: 1.5 }}>
+              Seuls les dossiers publiés par le MTP figurent sur la carte. Complétez les champs ci-dessous et validez
+              pour transmettre une proposition.
+            </p>
+          </section>
+
+          <form onSubmit={submitSuggestion} className="public-suggest-form">
+            <section className="qg-section">
+              <header className="qg-section-head">
+                <span className="qg-section-eyebrow">1 · Domaine</span>
+                <div className="qg-section-titlerow">
+                  <h3>Type d&apos;infrastructure</h3>
+                </div>
+              </header>
+              <div className="chips">
+                {TYPES.map((t) => (
+                  <button
+                    key={t.v}
+                    type="button"
+                    className={typeSuggere === t.v ? 'chip dot on' : 'chip dot'}
+                    style={{ ['--chip-color' as string]: t.color }}
+                    onClick={() => setTypeSuggere(t.v)}
+                  >
+                    <span className="chip-dot" />
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="qg-section">
+              <header className="qg-section-head">
+                <span className="qg-section-eyebrow">2 · Territoire</span>
+                <div className="qg-section-titlerow">
+                  <h3>Zone</h3>
+                </div>
+              </header>
+              <label className="public-field-label">
+                <span className="muted small">Zone</span>
+                <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} required>
+                  <option value="">Sélectionner…</option>
                   {zones.map((z) => (
-                    <option key={z.id} value={z.id}>{z.nom} ({z.code})</option>
+                    <option key={z.id} value={z.id}>
+                      {z.nom} ({z.code})
+                    </option>
                   ))}
                 </select>
-              </div>
+              </label>
+            </section>
 
-              {/* Etape 3 — Description */}
-              <div style={card}>
-                <div style={eyebrow}>Etape 3 — Description</div>
-                <textarea
-                  required
-                  minLength={3}
-                  maxLength={2000}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  placeholder="Decrivez le probleme observe..."
-                  style={{ ...fieldStyle, resize: 'vertical', minHeight: 100 }}
-                />
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{description.length}/2000</div>
-              </div>
-
-              {/* Etape 4 — Pseudo */}
-              <div style={card}>
-                <div style={eyebrow}>Etape 4 — Pseudo (optionnel)</div>
-                <input
-                  value={pseudo}
-                  onChange={(e) => setPseudo(e.target.value)}
-                  maxLength={120}
-                  placeholder="Citoyen anonyme"
-                  style={fieldStyle}
-                />
-              </div>
-
-              {/* Etape 5 — Localisation */}
-              <div style={card}>
-                <div style={eyebrow}>Etape 5 — Position sur la carte</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: 5,
-                    background: lat !== null ? 'var(--ok)' : 'var(--muted)', flexShrink: 0,
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>
-                      {lat !== null && lng !== null
-                        ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-                        : 'Aucun point selectionne'}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {lat !== null
-                        ? 'Position valide.'
-                        : 'Activez le mode placement puis cliquez la carte.'}
-                    </div>
-                  </div>
+            <section className="qg-section">
+              <header className="qg-section-head">
+                <span className="qg-section-eyebrow">3 · Description</span>
+                <div className="qg-section-titlerow">
+                  <h3>Description</h3>
+                  <span className="qg-section-meta">{description.length}/2000</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPick((p) => !p)}
-                  style={{
-                    background: pick ? 'var(--accent)' : 'var(--bg)',
-                    color: pick ? '#fff' : 'var(--textSoft)',
-                    border: `1px solid ${pick ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 8, padding: '9px 14px', fontSize: 13,
-                    fontWeight: 600, cursor: 'pointer', width: '100%',
-                  }}
-                >
-                  {pick ? 'Placement actif -- cliquez la carte' : 'Choisir le point sur la carte'}
-                </button>
-              </div>
+              </header>
+              <textarea
+                required
+                minLength={3}
+                maxLength={2000}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                placeholder="Objet précis du constat ; repères géographiques visibles au sol…"
+              />
+            </section>
 
-              {/* Submit */}
+            <section className="qg-section">
+              <header className="qg-section-head">
+                <span className="qg-section-eyebrow">Facultatif</span>
+                <div className="qg-section-titlerow">
+                  <h3>Identifiant de contact libre</h3>
+                </div>
+              </header>
+              <input
+                value={pseudo}
+                onChange={(e) => setPseudo(e.target.value)}
+                maxLength={120}
+                placeholder="Laisser vide pour rester anonyme"
+              />
+            </section>
+
+            <section className="qg-section">
+              <header className="qg-section-head">
+                <span className="qg-section-eyebrow">4 · Coordonnées</span>
+                <div className="qg-section-titlerow">
+                  <h3>Localisation géographique</h3>
+                </div>
+              </header>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                {lat !== null && lng !== null
+                  ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+                  : 'Aucune position'}
+              </p>
               <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  background: submitting ? 'var(--borderStrong)' : 'var(--accent)',
-                  color: '#fff', border: 'none', borderRadius: 12,
-                  padding: '13px 0', fontSize: 15, fontWeight: 800,
-                  cursor: submitting ? 'default' : 'pointer', letterSpacing: '0.3px',
-                  boxShadow: submitting ? 'none' : '0 4px 14px rgba(0,126,58,0.28)',
-                  width: '100%',
-                }}
+                type="button"
+                className={pick ? 'btn btn-primary block' : 'btn btn-ghost block'}
+                onClick={() => setPick((p) => !p)}
               >
-                {submitting ? 'Envoi...' : 'Envoyer la suggestion'}
+                {pick ? 'Pointage actif · cliquer la carte à droite' : 'Pointer sur la carte'}
               </button>
+            </section>
 
-            </form>
-          </div>
+            <div className="public-suggest-actions">
+              <button type="button" className="btn btn-ghost" onClick={cancelSuggestion}>
+                Annuler
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={submitting}>
+                {submitting ? 'Transmission…' : 'Transmettre'}
+              </button>
+            </div>
+          </form>
         </aside>
 
         <section className="panel map-panel">
           <MapView
             geojson={features}
             viewerRole={null}
+            compactUI
             height="100%"
             pickMode={pick}
-            onPickLatLng={(la, ln) => { setLat(la); setLng(ln); }}
+            onPickLatLng={(la, ln) => {
+              setLat(la);
+              setLng(ln);
+            }}
           />
         </section>
       </div>

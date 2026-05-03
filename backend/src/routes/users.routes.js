@@ -83,7 +83,10 @@ router.get('/equipes', async (req, res) => {
     where: {
       role: RoleEnum.EQUIPE_INTERVENTION,
       actif: true,
-      specialite: { [Op.ne]: SpecialiteEnum.JIRAMA },
+      [Op.or]: [
+        { specialite: { [Op.ne]: SpecialiteEnum.JIRAMA } },
+        { specialite: SpecialiteEnum.JIRAMA, zoneId: req.user.zoneId },
+      ],
     },
     attributes: [
       'id',

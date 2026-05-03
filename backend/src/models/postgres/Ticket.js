@@ -35,6 +35,12 @@ function defineTicket(sequelize) {
       },
       dateConfirmation: { type: DataTypes.DATE, allowNull: true, field: 'date_confirmation' },
       mission: { type: DataTypes.JSONB, allowNull: true },
+      /** Signalement officiel après instruction QG suite à suggestion citoyenne. */
+      originSuggestionId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        field: 'origin_suggestion_id',
+      },
     },
     { tableName: 'tickets', underscored: true, timestamps: true },
   );

@@ -1,6 +1,6 @@
 import { API_URL } from './config';
 import { getToken } from './auth';
-import type { MapTilesPayload, SuggestionCitoyen, Ticket, User, Zone } from './types';
+import type { MapTilesPayload, SuggestionCitoyen, TerrainClotureCodePatrouille, Ticket, User, Zone } from './types';
 
 async function parse<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -69,6 +69,15 @@ export const api = {
   suggestions: () =>
     request<{ suggestions: SuggestionCitoyen[] }>('/api/suggestions'),
 
+  suggestionCitoyenne: (id: string) =>
+    request<{ suggestion: SuggestionCitoyen }>(`/api/suggestions/${id}`),
+
+  clotureSuggestionTerrain: (id: string, body: { code: TerrainClotureCodePatrouille; comment: string }) =>
+    request<{ suggestion: SuggestionCitoyen }>(`/api/suggestions/${id}/terrain-cloture`, {
+      method: 'PATCH',
+      json: body,
+    }),
+
   patchTicket: (id: string, body: Record<string, unknown>) =>
     request<{ ticket: Ticket }>(`/api/tickets/${id}`, { method: 'PATCH', json: body }),
 
@@ -87,6 +96,7 @@ export const api = {
     photoUri: string;
     photoName?: string;
     photoMime?: string;
+    originSuggestionId?: string;
   }): Promise<Ticket> => {
     const fd = new FormData();
     fd.append('description', form.description);
@@ -94,6 +104,9 @@ export const api = {
     fd.append('typeInfrastructure', form.typeInfrastructure);
     fd.append('latitude', String(form.latitude));
     fd.append('longitude', String(form.longitude));
+    if (form.originSuggestionId) {
+      fd.append('originSuggestionId', form.originSuggestionId);
+    }
     fd.append(
       'photo',
       {

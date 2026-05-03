@@ -4,8 +4,9 @@
  * Routes protégées par JWT (authenticate) + requireRole(ADMIN_QG).
  * Le QG ne peut manipuler que ses agents de SA zone.
  *
- * Les équipes d'intervention hors spécialité JIRAMA sont gérées par l'Admin QG
- * (JIRAMA : compétence nationale — pas listées ni affectables depuis le QG).
+ * Les équipes d'intervention de la zone peuvent avoir les spécialités ROUTE, JIRAMA,
+ * NETTOYEUR ou REPARATEUR (réparation générale). À la création, latitude/longitude
+ * désignent le lieu de rattachement (base, dépôt ou point notable).
  *
  * Actions :
  *   - GET    /api/qg/agents                     liste des AGENT_PATROUILLE de la zone
@@ -17,7 +18,6 @@
  *   - DELETE /api/qg/agents/:id                 suppression (si aucun ticket signalé)
  */
 const express = require('express');
-const { Op } = require('sequelize');
 const { body, param, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/requireRole');
@@ -57,15 +57,6 @@ async function findRepairInMyZone(id, zoneId) {
   return User.findOne({
     where: { id, zoneId, role: RoleEnum.EQUIPE_INTERVENTION },
   });
-}
-
-function assertQgMayManageRepairAgent(agent) {
-  if (!agent) return;
-  if (agent.specialite === SpecialiteEnum.JIRAMA) {
-    const err = new Error('Les équipes JIRAMA sont hors périmètre du QG.');
-    err.status = 403;
-    throw err;
-  }
 }
 
 /* ------------------------------- List ----------------------------- */
@@ -210,6 +201,8 @@ function serializeRepair(u) {
     zoneId: u.zoneId,
     numeroTelephone: u.numeroTelephone,
     specialite: u.specialite,
+    positionLatitude: u.positionLatitude ?? null,
+    positionLongitude: u.positionLongitude ?? null,
     appareilLie: Boolean(u.appareilUnique),
     actif: u.actif,
     createdAt: u.createdAt,
@@ -225,7 +218,6 @@ router.get('/repair-agents', async (req, res) => {
     where: {
       zoneId: req.user.zoneId,
       role: RoleEnum.EQUIPE_INTERVENTION,
-      specialite: { [Op.ne]: SpecialiteEnum.JIRAMA },
     },
     order: [['nom', 'ASC'], ['prenom', 'ASC']],
   });
@@ -240,9 +232,15 @@ router.post(
   body('password').isString().isLength({ min: 8, max: 200 }),
   body('numeroTelephone').isString().trim().isLength({ min: 4, max: 32 }),
   body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
-  body('specialite')
-    .isIn([SpecialiteEnum.ROUTE, SpecialiteEnum.MACON, SpecialiteEnum.NETTOYEUR])
-    .withMessage('specialite doit être ROUTE, MACON ou NETTOYEUR (JIRAMA : compétence nationale)'),
+  body('latitude').isFloat({ min: -90, max: 90 }),
+  body('longitude').isFloat({ min: -180, max: 180 }),
+  body('specialite').isIn([
+    SpecialiteEnum.ROUTE,
+    SpecialiteEnum.JIRAMA,
+    SpecialiteEnum.NETTOYEUR,
+    SpecialiteEnum.REPARATEUR,
+    SpecialiteEnum.MACON,
+  ]),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -265,6 +263,8 @@ router.post(
       zoneId: req.user.zoneId,
       numeroTelephone: req.body.numeroTelephone,
       specialite: req.body.specialite,
+      positionLatitude: Number(req.body.latitude),
+      positionLongitude: Number(req.body.longitude),
       actif: true,
     });
 
@@ -278,11 +278,6 @@ router.patch('/repair-agents/:id/suspendre', param('id').isUUID(), async (req, r
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
-  try {
-    assertQgMayManageRepairAgent(agent);
-  } catch (e) {
-    return res.status(e.status || 403).json({ message: e.message });
-  }
 
   await agent.update({ actif: false, appareilUnique: null });
   return res.json({ agent: serializeRepair(agent) });
@@ -294,11 +289,6 @@ router.patch('/repair-agents/:id/reactiver', param('id').isUUID(), async (req, r
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
-  try {
-    assertQgMayManageRepairAgent(agent);
-  } catch (e) {
-    return res.status(e.status || 403).json({ message: e.message });
-  }
 
   await agent.update({ actif: true });
   return res.json({ agent: serializeRepair(agent) });
@@ -310,11 +300,6 @@ router.delete('/repair-agents/:id', param('id').isUUID(), async (req, res) => {
 
   const agent = await findRepairInMyZone(req.params.id, req.user.zoneId);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable dans votre zone' });
-  try {
-    assertQgMayManageRepairAgent(agent);
-  } catch (e) {
-    return res.status(e.status || 403).json({ message: e.message });
-  }
 
   await agent.destroy();
   return res.json({ ok: true });

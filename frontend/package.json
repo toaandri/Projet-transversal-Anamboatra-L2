@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "video:hero": "python -m yt_dlp -f \"bestvideo[height<=1080][ext=mp4]/bestvideo[height<=1080]/best[height<=1080][ext=mp4]/best[height<=1080]\" -o \"public/videos/tana-hero-1080p.mp4\" \"https://www.youtube.com/watch?v=1roGkBs8NbA\""
   },
   "dependencies": {
     "@vis.gl/react-google-maps": "^1.8.3",

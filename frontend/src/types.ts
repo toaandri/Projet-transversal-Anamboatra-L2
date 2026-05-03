@@ -20,7 +20,7 @@ export type Urgence = 'NORMAL' | 'URGENT';
 export type TypeInfrastructure = 'ROUTE' | 'ELECTRICITE' | 'EAU';
 
 /** Spécialité d'une EQUIPE_INTERVENTION (indépendante de TypeInfrastructure). */
-export type Specialite = 'ROUTE' | 'JIRAMA' | 'MACON' | 'NETTOYEUR';
+export type Specialite = 'ROUTE' | 'JIRAMA' | 'MACON' | 'NETTOYEUR' | 'REPARATEUR';
 
 export interface User {
   id: string;
@@ -91,6 +91,9 @@ export interface RepairAgent {
   zoneId: string; // DEPOT_REPARATION
   numeroTelephone: string | null;
   specialite: Specialite;
+  /** Lieu de rattachement (création QG), WGS84 — identique au dernier point de base équipe. */
+  positionLatitude?: number | null;
+  positionLongitude?: number | null;
   appareilLie: boolean;
   actif: boolean;
 }
@@ -126,8 +129,34 @@ export interface Ticket {
     dateDebut?: string;
     dateFin?: string;
   } | null;
+  /** Après consolidation d'une suggestion citoyenne envoyée au terrain. */
+  originSuggestionId?: string | null;
   dateSignalement?: string;
   updatedAt?: string;
+}
+
+export interface SuggestionPatrolBrief {
+  id: string;
+  nom: string;
+  prenom: string;
+  matricule?: string | null;
+}
+
+/** Suggestion citoyenne (liste / fiche — ordre possible vers patrouille). */
+export interface SuggestionCitoyen {
+  id: string;
+  description: string;
+  typeSuggere: TypeInfrastructure;
+  pseudoCitoyen?: string | null;
+  traitee: boolean;
+  zoneId: string;
+  localisation: { latitude: number; longitude: number };
+  dateSoumission?: string;
+  createdAt?: string;
+  assignedPatrolUserId?: string | null;
+  instructionQg?: string | null;
+  dispatchedAt?: string | null;
+  patrolAssignee?: SuggestionPatrolBrief | null;
 }
 
 export interface EquipeUser {

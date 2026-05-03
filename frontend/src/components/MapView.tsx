@@ -10,6 +10,7 @@ import {
   type MapMouseEvent,
 } from '@vis.gl/react-google-maps';
 import { ANAMBOATRA_MAP_STYLE } from '../mapStyles';
+import { type MapBasemapId, googleMapTypeFromBasemap } from '../mapBasemap';
 import type {
   GeoJsonFeature,
   GeoJsonPolygon,
@@ -57,10 +58,17 @@ type Props = {
   viewerRole: Role | null;
   onSelectFeature?: (feature: GeoJsonFeature) => void;
   pickMode?: boolean;
+  /** Texte au-dessus de la carte en mode pointage ; défaut générique. */
+  pickBannerText?: string;
   onPickLatLng?: (lat: number, lng: number) => void;
   height?: string;
   /** Zone d'action du viewer (commune QG, dépôt, etc.). Affichée en surbrillance. */
   myZone?: Zone | null;
+  /**
+   * Carte publique / mobile : pas de Pegman, pas de plein écran ni zoom natif (évite le chevauchement
+   * avec le bouton Menu), pas de sélecteur Plan/Satellite — zoom au pincement / molette.
+   */
+  compactUI?: boolean;
 };
 
 type FeatureProps = {
@@ -114,17 +122,12 @@ function MissingKey() {
   return (
     <div className="map-missing">
       <div>
-        <strong>Clé Google Maps manquante</strong>
+        <strong>Carte indisponible</strong>
         <p className="muted small">
-          Ajoutez <code>VITE_GOOGLE_MAPS_API_KEY</code> dans <code>frontend/.env.local</code>, puis redémarrez{' '}
-          <code>npm run dev</code>.
-        </p>
-        <p className="muted small">
-          Console&nbsp;:{' '}
+          Définissez <code>VITE_GOOGLE_MAPS_API_KEY</code><br />
           <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noreferrer">
-            console.cloud.google.com/google/maps-apis
-          </a>{' '}
-          — activer « Maps JavaScript API ».
+            Google Maps Platform
+          </a>
         </p>
       </div>
     </div>
@@ -136,11 +139,17 @@ export function MapView({
   viewerRole,
   onSelectFeature,
   pickMode,
+  pickBannerText,
   onPickLatLng,
   height = 'min(72vh, 640px)',
   myZone,
+  compactUI = false,
 }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [basemap, setBasemap] = useState<MapBasemapId>('plan');
+
+  const mapTypeId = googleMapTypeFromBasemap(basemap);
+  const mapStyles = !mapId ? ANAMBOATRA_MAP_STYLE : undefined;
 
   const zonePaths = useMemo(() => zoneToPaths(myZone?.geometrie), [myZone]);
   const zoneCenter = useMemo(() => (zonePaths ? centroidOfPaths(zonePaths) : null), [zonePaths]);
@@ -180,23 +189,24 @@ export function MapView({
       style={{ height, borderRadius: 12, overflow: 'hidden', position: 'relative' }}
     >
       <APIProvider apiKey={apiKey}>
+        {/* Contrôle caméra API récent (flèches + zoom losange) : désactivé pour ne pas doubler avec zoomControl ni chevaucher le bouton Menu (compactUI). */}
         <Map
           defaultCenter={TANA}
           defaultZoom={12}
           minZoom={5.8}
           restriction={{ latLngBounds: MADAGASCAR_BOUNDS, strictBounds: true }}
           mapId={mapId}
-          mapTypeId="hybrid"
-          styles={mapId ? undefined : ANAMBOATRA_MAP_STYLE}
+          mapTypeId={mapTypeId}
+          styles={mapStyles}
           gestureHandling="greedy"
           disableDefaultUI={false}
-          mapTypeControl
-          mapTypeControlOptions={{ mapTypeIds: ['hybrid', 'roadmap'] }}
-          zoomControl
-          streetViewControl
-          fullscreenControl
+          mapTypeControl={false}
+          cameraControl={false}
+          zoomControl={!compactUI}
+          streetViewControl={!compactUI}
+          fullscreenControl={!compactUI}
           scaleControl
-          rotateControl
+          rotateControl={!compactUI}
           clickableIcons={!pickMode}
           onClick={onMapClick}
           style={{ width: '100%', height: '100%' }}
@@ -248,8 +258,12 @@ export function MapView({
                 position={{ lat, lng }}
                 icon={icon}
                 onClick={() => {
+                  if (pickMode && onPickLatLng) {
+                    onPickLatLng(lat, lng);
+                    setSelectedIdx(null);
+                    return;
+                  }
                   setSelectedIdx(idx);
-                  if (pickMode && onPickLatLng) onPickLatLng(lat, lng);
                   onSelectFeature?.(f);
                 }}
               />
@@ -281,7 +295,26 @@ export function MapView({
 
         <ZoneFocus zone={myZone || null} paths={zonePaths} />
       </APIProvider>
-      {pickMode ? <div className="pick-banner">Cliquez sur la carte pour placer le point</div> : null}
+      {!compactUI ? (
+        <div className="map-basemap-control">
+          <label className="map-basemap-control-inner">
+            <span>Fond</span>
+            <select
+              value={basemap}
+              onChange={(e) => setBasemap(e.target.value as MapBasemapId)}
+              aria-label="Fond de carte"
+            >
+              <option value="plan">Plan</option>
+              <option value="satellite">Satellite</option>
+            </select>
+          </label>
+        </div>
+      ) : null}
+      {pickMode ? (
+        <div className="pick-banner">
+          {pickBannerText ?? 'Sélectionner un point sur la carte'}
+        </div>
+      ) : null}
     </div>
   );
 }

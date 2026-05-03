@@ -1,10 +1,10 @@
 const express = require('express');
 const { Op } = require('sequelize');
 const { body, param, validationResult } = require('express-validator');
-const { Ticket } = require('../models/postgres');
+const { Ticket, SuggestionCitoyen } = require('../models/postgres');
 const { authenticate } = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/requireRole');
-const { RoleEnum, UrgenceEnum, TypeEnum, StatutEnum } = require('../constants/enums');
+const { RoleEnum, UrgenceEnum, TypeEnum, StatutEnum, TerrainClotureCodeEnum } = require('../constants/enums');
 const { uploadPhoto, publicUrlForStoredFile } = require('../utils/photoUpload');
 const { assertPhotoLocationConsistent } = require('../utils/exifVerify');
 const { ticketVisibilityWhere } = require('../services/mapFilterService');
@@ -65,6 +65,7 @@ router.post(
   body('typeInfrastructure').isIn(Object.values(TypeEnum)),
   body('latitude').isFloat({ min: -90, max: 90 }),
   body('longitude').isFloat({ min: -180, max: 180 }),
+  body('originSuggestionId').optional().isUUID(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -74,6 +75,24 @@ router.post(
 
     const zoneId = req.user.zoneId;
     if (!zoneId) return res.status(400).json({ message: 'Agent sans zone assignée' });
+
+    /** @type {string | null} */
+    let originSuggestionIdVal = null;
+    if (req.body.originSuggestionId) {
+      const sug = await SuggestionCitoyen.findOne({
+        where: {
+          id: req.body.originSuggestionId,
+          zoneId,
+          traitee: false,
+        },
+      });
+      if (!sug) {
+        return res.status(400).json({
+          message: 'Suggestion introuvable dans votre zone ou déjà traitée.',
+        });
+      }
+      originSuggestionIdVal = sug.id;
+    }
 
     const photoUrl = publicUrlForStoredFile(req.file.filename);
 
@@ -91,7 +110,21 @@ router.post(
       statut: StatutEnum.EN_ATTENTE_CONFIRMATION,
       visiblePublic: false,
       dateSignalement: new Date(),
+      originSuggestionId: originSuggestionIdVal,
     });
+
+    if (originSuggestionIdVal) {
+      await SuggestionCitoyen.update(
+        {
+          traitee: true,
+          terrainClotureCode: TerrainClotureCodeEnum.OFFICIAL_TICKET,
+          terrainClotureComment: null,
+          terrainClotureParUserId: req.user.id,
+          terrainClotureAt: new Date(),
+        },
+        { where: { id: originSuggestionIdVal } },
+      );
+    }
 
     const io = req.app.get('io');
     if (io) {

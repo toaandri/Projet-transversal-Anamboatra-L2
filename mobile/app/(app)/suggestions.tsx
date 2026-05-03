@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/api';
@@ -30,7 +30,16 @@ function formatDate(iso?: string): string {
   }
 }
 
+function sortSuggestions(list: SuggestionCitoyen[]): SuggestionCitoyen[] {
+  return [...list].sort((a, b) => {
+    const ta = new Date(a.dateSoumission || a.createdAt || 0).getTime();
+    const tb = new Date(b.dateSoumission || b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+}
+
 export default function SuggestionsScreen() {
+  const router = useRouter();
   const [items, setItems] = useState<SuggestionCitoyen[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,8 +48,8 @@ export default function SuggestionsScreen() {
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const { suggestions } = await api.suggestions();
-      setItems(suggestions);
+      const sugRes = await api.suggestions();
+      setItems(sortSuggestions(sugRes.suggestions));
       setErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Chargement impossible');
@@ -126,6 +135,13 @@ export default function SuggestionsScreen() {
 
                 <Text style={styles.desc}>{item.description}</Text>
 
+                {item.instructionQg && !item.traitee ? (
+                  <View style={styles.orderBox}>
+                    <Text style={styles.orderEyebrow}>Consigne (historique)</Text>
+                    <Text style={styles.orderText}>{item.instructionQg}</Text>
+                  </View>
+                ) : null}
+
                 <View style={styles.metaRow}>
                   <View style={styles.metaItem}>
                     <Ionicons name="person-outline" size={12} color={colors.muted} />
@@ -139,6 +155,18 @@ export default function SuggestionsScreen() {
                     </Text>
                   </View>
                 </View>
+
+                {!item.traitee ? (
+                  <TouchableOpacity
+                    style={styles.ctaOfficiel}
+                    onPress={() =>
+                      router.push(`/(app)/report?suggestionId=${encodeURIComponent(item.id)}`)
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.ctaOfficielText}>Constat terrain →</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             );
           }}
@@ -216,4 +244,30 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   author: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   coord: { color: colors.muted, fontSize: 11, fontWeight: '600' },
+
+  orderBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 126, 58, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 126, 58, 0.2)',
+    gap: 4,
+  },
+  orderEyebrow: {
+    color: '#006c32',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  orderText: { color: colors.text, fontSize: 13, lineHeight: 18 },
+
+  ctaOfficiel: {
+    marginTop: 10,
+    backgroundColor: colors.accent,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  ctaOfficielText: { color: colors.white, fontWeight: '800', fontSize: 14 },
 });

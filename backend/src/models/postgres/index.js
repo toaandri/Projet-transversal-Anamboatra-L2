@@ -23,8 +23,16 @@ Ticket.belongsTo(User, { foreignKey: 'signalantUserId', as: 'signalant' });
 Zone.hasMany(SuggestionCitoyen, { foreignKey: 'zoneId', as: 'suggestions' });
 SuggestionCitoyen.belongsTo(Zone, { foreignKey: 'zoneId', as: 'zone' });
 
+User.hasMany(SuggestionCitoyen, { foreignKey: 'assignedPatrolUserId', as: 'dispatchedSuggestions' });
+SuggestionCitoyen.belongsTo(User, { foreignKey: 'assignedPatrolUserId', as: 'patrolAssignee' });
+
 Ticket.hasMany(StatusAudit, { foreignKey: 'ticketId', as: 'audits' });
 StatusAudit.belongsTo(Ticket, { foreignKey: 'ticketId', as: 'ticket' });
+
+Ticket.belongsTo(SuggestionCitoyen, {
+  foreignKey: 'originSuggestionId',
+  as: 'originSuggestion',
+});
 
 async function syncPostgres() {
   await sequelize.sync({ alter: true });

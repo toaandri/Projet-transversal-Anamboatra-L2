@@ -39,7 +39,29 @@ export interface Ticket {
   } | null;
   dateSignalement?: string;
   updatedAt?: string;
+  originSuggestionId?: string | null;
 }
+
+export interface SuggestionCitoyen {
+  id: string;
+  description: string;
+  typeSuggere: TypeInfrastructure;
+  pseudoCitoyen?: string | null;
+  traitee: boolean;
+  zoneId: string;
+  localisation: { latitude: number; longitude: number };
+  dateSoumission?: string;
+  createdAt?: string;
+  assignedPatrolUserId?: string | null;
+  instructionQg?: string | null;
+  dispatchedAt?: string | null;
+  patrolAssignee?: { id: string; nom: string; prenom: string; matricule?: string | null } | null;
+  terrainClotureCode?: string | null;
+  terrainClotureComment?: string | null;
+}
+
+/** Codes autorisés pour clôturer une suggestion sur le terrain (mobile patrouille). */
+export type TerrainClotureCodePatrouille = 'NON_CONFORME' | 'NON_REPERE' | 'AUTRE';
 
 export interface GeoFeature {
   type: 'Feature';
@@ -73,16 +95,4 @@ export interface Zone {
   code: string;
   numeroQg?: string | null;
   geometrie?: GeoJsonPolygon | { type: string; coordinates?: unknown } | null;
-}
-
-export interface SuggestionCitoyen {
-  id: string;
-  description: string;
-  typeSuggere: TypeInfrastructure;
-  pseudoCitoyen?: string | null;
-  traitee: boolean;
-  zoneId: string;
-  localisation: { latitude: number; longitude: number };
-  dateSoumission?: string;
-  createdAt?: string;
 }

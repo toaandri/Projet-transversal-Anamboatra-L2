@@ -52,6 +52,11 @@ frontend/.cache/
 frontend/.parcel-cache/
 frontend/coverage/
 
+# Vidéo hero storytelling (réimport depuis frontend/: npm run video:hero — ~58 Mo)
+frontend/public/videos/tana-hero-1080p.mp4
+frontend/public/videos/*.webm
+frontend/public/videos/*.f*.mp4
+
 
 # --- Mobile Expo / React Native (dossier prévu) ---
 mobile/node_modules/

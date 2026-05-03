@@ -8,14 +8,14 @@ import { PublicHome } from './pages/PublicHome';
 
 function ProtectedApp() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="page center muted">Chargement…</div>;
+  if (loading) return <div className="page center muted">Chargement du profil…</div>;
   if (!user) return <Navigate to="/connexion" replace />;
   return <DashboardPage />;
 }
 
 function LoginGate() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="page center muted">Chargement…</div>;
+  if (loading) return <div className="page center muted">Chargement du profil…</div>;
   if (user) return <Navigate to="/app" replace />;
   return <LoginPage />;
 }

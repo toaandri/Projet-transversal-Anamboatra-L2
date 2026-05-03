@@ -27,7 +27,7 @@ export default function LoginScreen() {
 
   async function onSubmit() {
     if (!email.trim() || !password) {
-      Alert.alert('Champs requis', 'Merci de saisir e-mail et mot de passe.');
+      Alert.alert('Informations manquantes', 'Renseigner l’adresse e-mail et le mot de passe.');
       return;
     }
     setBusy(true);
@@ -71,8 +71,8 @@ export default function LoginScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Connexion agent</Text>
             <Text style={styles.cardLead}>
-              Réservée aux agents de patrouille et équipes d'intervention. Vos identifiants
-              vous sont remis par votre QG.
+              Réservé aux agents de patrouille et aux équipes d’intervention. Les identifiants sont délivrés par le
+              QG de rattachement.
             </Text>
 
             <Text style={styles.label}>Adresse e-mail</Text>
@@ -112,8 +112,8 @@ export default function LoginScreen() {
               <Text style={styles.footerText}>Serveur : {API_URL}</Text>
             </View>
             <Text style={styles.footerHint}>
-              Si l'adresse n'est pas joignable, vérifie que ton téléphone et ton PC sont sur
-              le même Wi-Fi, et que le backend tourne (`npm run dev` dans `/backend`).
+              En environnement local : téléphone serveur exposé depuis le même segment réseau que le poste de
+              développement ; vérifiez que le backend Anamboatra est démarré.
             </Text>
           </View>
         </ScrollView>

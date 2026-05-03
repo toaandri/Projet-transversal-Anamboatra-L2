@@ -250,7 +250,7 @@ router.post(
   body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
   body('specialite')
     .isIn(Object.values(SpecialiteEnum))
-    .withMessage('specialite doit être ROUTE, JIRAMA, MACON ou NETTOYEUR'),
+    .withMessage('specialite doit être une valeur SpecialiteEnum connue'),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });

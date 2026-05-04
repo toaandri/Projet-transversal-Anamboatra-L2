@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../useAuth';
 
 const MADAGASCAR_PATH =
   'M 87.05 7.62 L 90.72 13.85 L 94.14 23.53 L 96.37 41.16 L 99.95 48.01 L 98.58 55.04 L 96.13 59.34 L 91.43 50.76 L 88.83 55.10 L 91.47 65.95 L 90.24 72.16 L 86.42 75.55 L 85.55 87.96 L 80.10 105.04 L 73.28 125.23 L 64.74 152.99 L 59.43 173.36 L 53.18 190.35 L 41.93 193.82 L 29.86 200.00 L 21.89 196.26 L 10.91 191.02 L 7.10 183.29 L 6.19 170.30 L 1.32 158.62 L 0.06 148.07 L 2.54 137.51 L 8.91 134.97 L 8.94 130.10 L 15.55 118.99 L 16.80 109.66 L 13.59 102.72 L 10.97 93.49 L 9.86 79.99 L 14.69 71.79 L 16.55 62.50 L 23.44 61.96 L 31.16 58.96 L 36.28 56.30 L 42.35 56.10 L 50.23 47.76 L 61.62 38.74 L 65.77 31.37 L 63.89 25.11 L 69.76 26.87 L 77.39 16.69 L 77.64 7.88 L 82.22 1.33 L 87.05 7.62 Z';
@@ -252,7 +251,6 @@ function StoryMadagascarMapCard({ reducedMotion }: { reducedMotion: boolean }) {
 }
 
 export function PublicLanding() {
-  const { user } = useAuth();
   const scrollerRef = useRef<HTMLElement>(null);
   const { active, goTo } = useStoryScreen(scrollerRef);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -316,15 +314,9 @@ export function PublicLanding() {
           <Link to="/travaux" className="story-nav-pill">
             Carte publique
           </Link>
-          {user ? (
-            <Link to="/app" className="story-nav-cta">
-              Espace métier
-            </Link>
-          ) : (
-            <Link to="/connexion" className="story-nav-cta">
-              Connexion
-            </Link>
-          )}
+          <span className="story-nav-note muted small" title="Accréditations MTP et QG via l'application bureau dédiée">
+            Espace QG / MTP : logiciel poste
+          </span>
         </nav>
       </header>
 
@@ -412,11 +404,6 @@ export function PublicLanding() {
                 Consultation cartographique
                 <span className="story-cta-arrow">→</span>
               </Link>
-              {user ? (
-                <Link to="/app" className="story-cta-ghost">
-                  Espace métier connecté
-                </Link>
-              ) : null}
             </div>
             <button
               type="button"
@@ -555,11 +542,6 @@ export function PublicLanding() {
                 Ouvrir la carte publique officielle
                 <span className="story-cta-arrow">→</span>
               </Link>
-              {user ? (
-                <Link to="/app" className="story-cta-ghost story-cta-ghost--light">
-                  Espace métier connecté
-                </Link>
-              ) : null}
             </div>
             <footer className="story-foot" data-anim="fade-up" data-delay="500">
               <span>

@@ -157,6 +157,8 @@ export interface SuggestionCitoyen {
   instructionQg?: string | null;
   dispatchedAt?: string | null;
   patrolAssignee?: SuggestionPatrolBrief | null;
+  terrainClotureCode?: string | null;
+  terrainClotureComment?: string | null;
 }
 
 export interface EquipeUser {

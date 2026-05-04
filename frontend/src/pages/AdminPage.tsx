@@ -258,7 +258,7 @@ export function AdminPage() {
             </p>
           ) : null}
           <div className="row" style={{ marginBottom: 12 }}>
-            <Link to="/connexion" className="btn btn-primary">
+            <Link to="/" className="btn btn-primary">
               Connexion super-administrateur
             </Link>
           </div>
@@ -298,7 +298,7 @@ export function AdminPage() {
       setMode(null);
     } else {
       logout();
-      nav('/connexion', { replace: true });
+      nav('/', { replace: true });
     }
   };
 

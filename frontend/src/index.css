@@ -4803,6 +4803,13 @@ textarea {
   gap: 8px;
 }
 
+.story-nav-note {
+  font-size: 0.78rem;
+  max-width: 15rem;
+  line-height: 1.35;
+  color: #5b6479;
+}
+
 .story-nav-pill {
   font-size: 0.84rem;
   padding: 8px 14px;

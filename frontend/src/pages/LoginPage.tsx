@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../useAuth';
 
 export function LoginPage() {
@@ -27,15 +27,14 @@ export function LoginPage() {
   return (
     <div className="page login-page">
       <div className="panel login-card">
-        <Link to="/" className="muted small back-link">
-          ← Retour présentation
-        </Link>
         <h1>Connexion Anamboatra</h1>
-        <p className="muted small">Accès réservé : citoyens, administrateurs QG et MTP (interface web).</p>
+        <p className="muted small">
+          Accès réservé aux comptes habilités QG et MTP — application poste (hors site grand public).
+        </p>
         <details className="login-details-muted">
           <summary>Patrouilles et équipes d&apos;intervention</summary>
           <p className="muted small">
-            Identifiants actifs depuis l&apos;application mobile Terrain (non disponible depuis ce navigateur).
+            Identifiants actifs depuis l&apos;application mobile Terrain (non disponible depuis ce poste).
           </p>
         </details>
         {err ? <p className="alert error">{err}</p> : null}
@@ -56,9 +55,6 @@ export function LoginPage() {
             />
           </label>
           <div className="login-form-actions">
-            <Link to="/" className="btn btn-ghost">
-              Annuler
-            </Link>
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? 'Connexion…' : 'Connexion'}
             </button>

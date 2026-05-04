@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "dev:electron": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173/staff.html && electron electron/main.cjs --dev\"",
     "build": "tsc -b && vite build",
+    "build:staff": "tsc -b && vite build --mode staff-desktop",
+    "electron:pack": "npm run build:staff && npm exec -- electron-builder --win",
     "preview": "vite preview",
     "video:hero": "python -m yt_dlp -f \"bestvideo[height<=1080][ext=mp4]/bestvideo[height<=1080]/best[height<=1080][ext=mp4]/best[height<=1080]\" -o \"public/videos/tana-hero-1080p.mp4\" \"https://www.youtube.com/watch?v=1roGkBs8NbA\""
   },
@@ -23,7 +27,26 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "concurrently": "^9.1.2",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
     "typescript": "~5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "mg.gov.mtp.anamboatra.staff",
+    "productName": "Anamboatra Poste QG",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/main.cjs",
+      "dist-staff/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["portable"]
+    }
   }
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { useAuth } from '../useAuth';
 import { MapView } from '../components/MapView';
 import type { GeoJsonFeature, TypeInfrastructure, Zone } from '../types';
 import { useMapSocket } from '../useMapSocket';
@@ -24,7 +23,6 @@ function initialCitizenSideOpen(): boolean {
 }
 
 export function PublicHome() {
-  const { user } = useAuth();
   const [features, setFeatures] = useState<GeoJsonFeature[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -173,11 +171,6 @@ export function PublicHome() {
               <Link to="/" className="btn btn-ghost">
                 Présentation publique
               </Link>
-              {user ? (
-                <Link to="/app" className="btn btn-primary">
-                  Espace métier
-                </Link>
-              ) : null}
             </div>
           </section>
 

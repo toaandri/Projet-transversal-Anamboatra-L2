@@ -1,5 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const proxyPaths = ['/api', '/static', '/map', '/socket.io'];
 
@@ -42,9 +46,17 @@ function proxyTo(target: string) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const api = env.VITE_PROXY_TARGET || 'http://localhost:4000';
+  const staffDesktop = mode === 'staff-desktop';
 
   return {
+    base: staffDesktop ? './' : '/',
     plugins: [react()],
+    build: {
+      outDir: staffDesktop ? 'dist-staff' : 'dist',
+      rollupOptions: {
+        input: path.resolve(__dirname, staffDesktop ? 'staff.html' : 'index.html'),
+      },
+    },
     server: {
       port: 5173,
       proxy: proxyTo(api),

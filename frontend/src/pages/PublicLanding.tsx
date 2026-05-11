@@ -299,26 +299,6 @@ export function PublicLanding() {
   return (
     <div className="story-page" data-story-active={active}>
       {/* Marque + nav flottante */}
-      <header className="story-nav">
-        <Link to="/" className="story-brand">
-          <span className="story-mark" aria-hidden="true">
-            <span className="story-mark-flag" />
-            <span className="story-mark-pin" />
-          </span>
-          <span className="story-brand-text">
-            <strong>Anamboatra</strong>
-            <small>Ministère des Travaux Publics — suivi géolocalisé des dossiers infrastructure</small>
-          </span>
-        </Link>
-        <nav className="story-nav-links" aria-label="Sections">
-          <Link to="/travaux" className="story-nav-pill">
-            Carte publique
-          </Link>
-          <span className="story-nav-note muted small" title="Accréditations MTP et QG via l'application bureau dédiée">
-            Espace QG / MTP : logiciel poste
-          </span>
-        </nav>
-      </header>
 
       <span className="story-sr-only" aria-live="polite">
         {liveLabel}
@@ -379,14 +359,11 @@ export function PublicLanding() {
         {/* Écran 1 — Manifeste plein écran */}
         <section className="story-screen story-screen--manifesto" data-screen="manifesto">
           <div className="story-screen-content story-manifesto">
-            <span className="story-eyebrow story-eyebrow--tana-city" data-anim="fade-up">
-              <span className="story-eyebrow-dot" /> République de Madagascar · dispositif Anamboatra (MTP)
-            </span>
             <p className="story-manifesto-intro" data-anim="fade-up" data-delay="50">
-              <span lang="mg">Renivohitr&apos;i Madagasikara · Tanànan&apos;Antananarivo</span>
+              <span lang="mg">Ministere du travaux public · Anamboatra </span>
               <br />
               <span className="story-manifesto-subfr" lang="fr">
-                Capitale — filière SIG · SGRI · Ministère des Travaux Publics.
+                Projet Transversal L2 SIO Maharavo
               </span>
             </p>
             <h1 className="story-h1" data-anim="fade-up" data-delay="100">
@@ -395,10 +372,6 @@ export function PublicLanding() {
                 Une cartographie nationale tenue sous responsabilité du MTP
               </span>
             </h1>
-            <p className="story-lede" data-anim="fade-up" data-delay="250">
-              Les dossiers géolocalisés transitent depuis la carte publique ou les applications terrain vers les niveaux MTP,
-              QG et exécution. Chaque statut reflète une décision ou un constat dans le dossier officiel du dispositif.
-            </p>
             <div className="story-cta-row" data-anim="fade-up" data-delay="400">
               <Link to="/travaux" className="story-cta-primary">
                 Consultation cartographique
@@ -429,9 +402,6 @@ export function PublicLanding() {
           </div>
           <div className="story-screen-content story-carte">
             <div className="story-carte-text story-panel story-panel--carte">
-              <span className="story-eyebrow" data-anim="fade-up">
-                <span className="story-eyebrow-dot story-eyebrow-dot--blue" /> Calque géographique unique
-              </span>
               <h2 className="story-h2" data-anim="fade-up" data-delay="120">
                 Une vue nationale des territoires et des axes suivis&nbsp;<br />
                 <span className="story-h2-grad">Instruction et publication selon périmètres MTP</span>
@@ -471,9 +441,6 @@ export function PublicLanding() {
           <div className="story-screen-content story-roles">
             <div className="story-roles-intro story-panel story-panel--roles">
               <header className="story-roles-head">
-                <span className="story-eyebrow" data-anim="fade-up">
-                  <span className="story-eyebrow-dot story-eyebrow-dot--green" /> Chaîne MTP — patrouilles — équipes — QG
-                </span>
                 <h2 className="story-h2 story-h2--center" data-anim="fade-up" data-delay="120">
                   Répartition fonctionnelle des statuts&nbsp;<br />
                   <span className="story-h2-grad">du signalement jusqu’à la clôture</span>
@@ -526,16 +493,11 @@ export function PublicLanding() {
             <span className="story-orb story-orb-g" />
           </div>
           <div className="story-screen-content story-agir">
-            <span className="story-eyebrow story-eyebrow--light" data-anim="fade-up">
-              <span className="story-eyebrow-dot story-eyebrow-dot--red" /> Publication des données MTP
-            </span>
             <h2 className="story-h2 story-h2--center story-h2--light" data-anim="fade-up" data-delay="120">
               Consultation et signalement officiels
             </h2>
             <p className="story-lede story-lede--center story-lede--light" data-anim="fade-up" data-delay="240">
-              La carte ne reproduit que ce que le MTP autorise en consultation publique. Toute proposition d’anomalie
-              transite par la page « carte publique ». Le référentiel géographique de référence reste réservé aux comptes
-              habilités.
+              Visitez la carte anamboatra, ou vous pouvez voir toute la carte de Madagascar avec toutes les reparations prevues en toute transparence
             </p>
             <div className="story-cta-row story-cta-row--center" data-anim="fade-up" data-delay="360">
               <Link to="/travaux" className="story-cta-primary story-cta-primary--xl">
@@ -545,10 +507,10 @@ export function PublicLanding() {
             </div>
             <footer className="story-foot" data-anim="fade-up" data-delay="500">
               <span>
-                <strong>Ministère des Travaux Publics</strong> — République de Madagascar
+                <strong>Projet Transversal</strong> - By Maharavo     
               </span>
-              <span>Anamboatra · coordination opérationnelle</span>
-              <span>© 2026 — République de Madagascar</span>
+              <span>Anamboatra</span>
+              <span>© 2026 — Repoblikan'i Madagasikara</span>
             </footer>
           </div>
         </section>

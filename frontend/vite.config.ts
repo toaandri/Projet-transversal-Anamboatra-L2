@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const api = env.VITE_PROXY_TARGET || 'http://localhost:4000';
   const staffDesktop = mode === 'staff-desktop';
+  const openStaffBrowser = process.env.npm_lifecycle_event === 'dev:staff';
 
   return {
     base: staffDesktop ? './' : '/',
@@ -60,6 +61,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: proxyTo(api),
+      open: openStaffBrowser ? '/staff.html#/' : false,
     },
     preview: {
       port: 4173,

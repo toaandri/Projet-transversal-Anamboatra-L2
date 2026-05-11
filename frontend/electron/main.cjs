@@ -21,10 +21,12 @@ function createWindow() {
   const hasStaffBuild = fs.existsSync(staffHtmlPath());
   const useVite = forceVite || (!app.isPackaged && !hasStaffBuild);
 
+  // HashRouter : avec file:// ou au premier chargement, sans "#/" la route "/"
+  // (LoginPage via StaffApp) peut ne pas correspondre — on ouvre toujours le login.
   if (useVite) {
-    win.loadURL('http://127.0.0.1:5173/staff.html');
+    win.loadURL('http://127.0.0.1:5173/staff.html#/');
   } else {
-    win.loadFile(staffHtmlPath());
+    win.loadFile(staffHtmlPath(), { hash: '/' });
   }
 }
 

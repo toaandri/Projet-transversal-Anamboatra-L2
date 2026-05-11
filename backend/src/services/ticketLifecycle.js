@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { StatusAudit, User } = require('../models/postgres');
-const { StatutEnum, RoleEnum, TypeEnum, SpecialiteEnum } = require('../constants/enums');
+const { StatutEnum, RoleEnum, SpecialiteEnum } = require('../constants/enums');
 
 async function logTransition(ticketId, ancien, nouveau, acteur) {
   await StatusAudit.create({
@@ -32,9 +32,6 @@ async function applyTicketPatch(ticket, body, actorUser) {
   if (role === RoleEnum.ADMIN_QG) {
     if (String(ticket.zoneId) !== String(actorUser.zoneId)) {
       throw new Error('Ticket hors de votre zone QG');
-    }
-    if (ticket.typeInfrastructure === TypeEnum.ELECTRICITE) {
-      throw new Error('Périmètre JIRAMA : ce ticket ne peut pas être piloté depuis le QG.');
     }
     if (ancien === StatutEnum.EN_ATTENTE_CONFIRMATION && next === StatutEnum.REPARATION_PREVUE) {
       const equipeIds = body.equipeUserIds;

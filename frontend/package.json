@@ -6,6 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "dev:staff": "vite",
     "dev:electron": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173/staff.html && electron electron/main.cjs --dev\"",
     "build": "tsc -b && vite build",
     "build:staff": "tsc -b && vite build --mode staff-desktop",

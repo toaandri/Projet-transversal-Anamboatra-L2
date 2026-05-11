@@ -184,9 +184,9 @@ export function PublicHome() {
                 <h3>Information affichée</h3>
               </div>
             </header>
-            <p className="muted small" style={{ margin: 0, lineHeight: 1.5 }}>
-              Seuls les dossiers publiés par le MTP figurent sur la carte. Complétez les champs ci-dessous et validez
-              pour transmettre une proposition.
+              <p className="muted small" style={{ margin: 0, lineHeight: 1.5 }}>
+              Tous les dossiers rendus publics par le MTP sur le territoire figurent sur la carte. Complétez les champs
+              ci-dessous et validez pour transmettre une proposition dans la zone choisie.
             </p>
           </section>
 
@@ -232,6 +232,10 @@ export function PublicHome() {
                   ))}
                 </select>
               </label>
+              <p className="muted small" style={{ marginTop: 8, lineHeight: 1.45 }}>
+                La commune sert à acheminer votre proposition ; la carte affiche tous les dossiers publics
+                approuvés à l&apos;échelle nationale.
+              </p>
             </section>
 
             <section className="qg-section">

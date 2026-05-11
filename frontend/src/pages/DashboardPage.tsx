@@ -169,36 +169,26 @@ export function DashboardPage() {
 
   useMapSocket(load);
 
-  /** Filtres : le QG communal n'expose pas la couche électricité nationale. */
-  const filtersForRole = useMemo(() => {
-    if (role !== 'ADMIN_QG') return filters;
-    const types = filters.types.filter((t) => t !== 'ELECTRICITE');
-    return types.length === filters.types.length ? filters : { ...filters, types };
-  }, [role, filters]);
-
-  const typeFilterChips = useMemo(
-    () => (role === 'ADMIN_QG' ? TYPES.filter((t) => t.v !== 'ELECTRICITE') : TYPES),
-    [role],
-  );
+  const typeFilterChips = TYPES;
 
   const filteredFeatures = useMemo(
-    () => filterGeo(features, filtersForRole),
-    [features, filtersForRole],
+    () => filterGeo(features, filters),
+    [features, filters],
   );
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
-      if (filtersForRole.statuts.length && !filtersForRole.statuts.includes(t.statut)) return false;
-      if (filtersForRole.urgences.length && !filtersForRole.urgences.includes(t.urgence))
+      if (filters.statuts.length && !filters.statuts.includes(t.statut)) return false;
+      if (filters.urgences.length && !filters.urgences.includes(t.urgence))
         return false;
       if (
-        filtersForRole.types.length &&
-        !filtersForRole.types.includes(t.typeInfrastructure)
+        filters.types.length &&
+        !filters.types.includes(t.typeInfrastructure)
       )
         return false;
       return true;
     });
-  }, [tickets, filtersForRole]);
+  }, [tickets, filters]);
 
   // Stats d'en-tête (tickets bruts)
   const stats = useMemo(() => ({
@@ -390,9 +380,9 @@ export function DashboardPage() {
           {(role !== 'ADMIN_QG' || qgMenuPage === 'signalements')
             ? (() => {
             const total =
-              filtersForRole.statuts.length +
-              filtersForRole.urgences.length +
-              filtersForRole.types.length;
+              filters.statuts.length +
+              filters.urgences.length +
+              filters.types.length;
             return (
               <section className="qg-section">
                 <header className="qg-section-head">
@@ -420,7 +410,7 @@ export function DashboardPage() {
                       <button
                         key={s}
                         type="button"
-                        className={filtersForRole.statuts.includes(s) ? 'chip dot on' : 'chip dot'}
+                        className={filters.statuts.includes(s) ? 'chip dot on' : 'chip dot'}
                         style={{ ['--chip-color' as string]: STATUT_COLORS[s] }}
                         onClick={() => toggleFilter('statuts', s)}
                       >
@@ -438,7 +428,7 @@ export function DashboardPage() {
                       <button
                         key={u}
                         type="button"
-                        className={filtersForRole.urgences.includes(u) ? 'chip dot on' : 'chip dot'}
+                        className={filters.urgences.includes(u) ? 'chip dot on' : 'chip dot'}
                         style={{ ['--chip-color' as string]: URGENCE_COLORS[u] }}
                         onClick={() => toggleFilter('urgences', u)}
                       >
@@ -457,7 +447,7 @@ export function DashboardPage() {
                         key={t.v}
                         type="button"
                         className={
-                          filtersForRole.types.includes(t.v) ? 'chip dot on' : 'chip dot'
+                          filters.types.includes(t.v) ? 'chip dot on' : 'chip dot'
                         }
                         style={{ ['--chip-color' as string]: t.color }}
                         onClick={() => toggleFilter('types', t.v)}

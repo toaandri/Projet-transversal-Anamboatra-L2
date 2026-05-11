@@ -1,5 +1,5 @@
 /** Référentiel territorial national — console administration (MTP / Anamboatra). */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   APIProvider,
@@ -53,6 +53,13 @@ type ZoneDraft = {
   code: string;
   numeroQg: string;
   vertices: { lat: number; lng: number }[];
+  /** Création commune uniquement : 1er admin QG (même flux que l’onglet Admins QG). */
+  qgPrenom: string;
+  qgNom: string;
+  qgEmailLocal: string;
+  qgPassword: string;
+  qgNumeroTelephone: string;
+  qgMatricule: string;
 };
 
 const EMPTY_DRAFT: ZoneDraft = {
@@ -61,6 +68,12 @@ const EMPTY_DRAFT: ZoneDraft = {
   code: '',
   numeroQg: '',
   vertices: [],
+  qgPrenom: '',
+  qgNom: '',
+  qgEmailLocal: '',
+  qgPassword: '',
+  qgNumeroTelephone: '',
+  qgMatricule: '',
 };
 
 function verticesToGeoJson(vertices: { lat: number; lng: number }[]): GeoJsonPolygon | null {
@@ -463,15 +476,34 @@ export function AdminPage() {
                   setMapPlacementActive(false);
                   setDraft((d) => ({ ...d, vertices: [] }));
                 }}
-                onSave={async (payload) => {
+                onSave={async (payload, qgAdmin) => {
                   try {
                     setErr(null);
                     if (draft.id) {
                       await api.adminUpdateZone(draft.id, payload, adminOpts);
                       setMsg('Zone mise à jour.');
                     } else {
-                      await api.adminCreateZone(payload, adminOpts);
-                      setMsg('Zone créée.');
+                      const { zone } = await api.adminCreateZone(payload, adminOpts);
+                      if (qgAdmin) {
+                        try {
+                          await api.adminCreateQgAdmin(
+                            { zoneId: zone.id, ...qgAdmin },
+                            adminOpts,
+                          );
+                          setMsg(`Commune créée · compte QG ${qgAdmin.email}`);
+                        } catch (e2) {
+                          setErr(
+                            e2 instanceof Error
+                              ? e2.message
+                              : 'Erreur création administrateur',
+                          );
+                          setMsg(
+                            `Commune « ${zone.nom} » créée. Créez le compte admin depuis l’onglet Admins QG si besoin.`,
+                          );
+                        }
+                      } else {
+                        setMsg('Zone créée.');
+                      }
                     }
                     resetNewZoneFlow();
                     await runRefresh();
@@ -507,6 +539,12 @@ export function AdminPage() {
                     code: z.code,
                     numeroQg: z.numeroQg || '',
                     vertices: geoJsonToVertices(z.geometrie),
+                    qgPrenom: '',
+                    qgNom: '',
+                    qgEmailLocal: '',
+                    qgPassword: '',
+                    qgNumeroTelephone: '',
+                    qgMatricule: '',
                   });
                   setMsg(null);
                   setErr(null);
@@ -587,17 +625,30 @@ function ZoneEditor({
   onBeginMapPlacement?: () => void;
   /** Nouvelle zone : quitter la carte placement et revenir en consultation sans fermer le formulaire. */
   onCancelMapPlacement?: () => void;
-  onSave: (payload: {
-    nom: string;
-    type: string;
-    code: string;
-    numeroQg: string | null;
-    geometrie: GeoJsonPolygon | null;
-  }) => Promise<void> | void;
+  onSave: (
+    payload: {
+      nom: string;
+      type: string;
+      code: string;
+      numeroQg: string | null;
+      geometrie: GeoJsonPolygon | null;
+    },
+    qgAdmin:
+      | null
+      | {
+          nom: string;
+          prenom: string;
+          email: string;
+          password: string;
+          numeroTelephone: string;
+          matricule: string | null;
+        },
+  ) => Promise<void> | void;
   onCancel: () => void;
 }) {
   const geojson = useMemo(() => verticesToGeoJson(draft.vertices), [draft.vertices]);
   const isNewZone = !draft.id;
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   return (
     <section className="form bubble-card">
@@ -631,6 +682,53 @@ function ZoneEditor({
           Carte masquée.
         </p>
       ) : null}
+      <form
+        ref={formRef}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!formRef.current?.checkValidity()) {
+            formRef.current?.reportValidity();
+            return;
+          }
+          const zonePayload = {
+            nom: draft.nom.trim(),
+            type: draft.type,
+            code: draft.code.trim(),
+            numeroQg: draft.numeroQg.trim() || null,
+            geometrie: geojson,
+          };
+          let qgAdmin:
+            | null
+            | {
+                nom: string;
+                prenom: string;
+                email: string;
+                password: string;
+                numeroTelephone: string;
+                matricule: string | null;
+              } = null;
+          if (isNewZone && draft.type === 'ARRONDISSEMENT') {
+            qgAdmin = {
+              nom: draft.qgNom.trim(),
+              prenom: draft.qgPrenom.trim(),
+              email: fullOrgEmail(draft.qgEmailLocal),
+              password: draft.qgPassword,
+              numeroTelephone: draft.qgNumeroTelephone.trim(),
+              matricule: draft.qgMatricule.trim() || null,
+            };
+            if (
+              !qgAdmin.nom ||
+              !qgAdmin.prenom ||
+              !draft.qgEmailLocal.trim() ||
+              qgAdmin.password.length < 8 ||
+              !qgAdmin.numeroTelephone
+            ) {
+              return;
+            }
+          }
+          void onSave(zonePayload, qgAdmin);
+        }}
+      >
       <label>
         Nom
         <input
@@ -671,6 +769,73 @@ function ZoneEditor({
           placeholder="+261 …"
         />
       </label>
+      {isNewZone && draft.type === 'ARRONDISSEMENT' ? (
+        <fieldset
+          className="admin-zone-qg-fieldset"
+          style={{
+            marginTop: 12,
+            marginBottom: 8,
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: '1px solid rgba(15, 23, 42, 0.12)',
+            background: 'rgba(248, 250, 252, 0.9)',
+          }}
+        >
+          <legend className="small" style={{ fontWeight: 700, padding: '0 6px' }}>
+            Administrateur QG de la commune
+          </legend>
+          <p className="muted small" style={{ marginTop: 0, marginBottom: 12, lineHeight: 1.45 }}>
+            Identifiants du premier responsable : même compte que sur l&apos;onglet « Admins QG ».
+          </p>
+          <label>
+            Nom
+            <input
+              required
+              value={draft.qgNom}
+              onChange={(e) => setDraft({ ...draft, qgNom: e.target.value })}
+            />
+          </label>
+          <label>
+            Prénom
+            <input
+              required
+              value={draft.qgPrenom}
+              onChange={(e) => setDraft({ ...draft, qgPrenom: e.target.value })}
+            />
+          </label>
+          <label>
+            E-mail
+            <OrgEmailLocalField required value={draft.qgEmailLocal} onChange={(v) => setDraft({ ...draft, qgEmailLocal: v })} />
+          </label>
+          <label>
+            Mot de passe (≥ 8 caractères)
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={draft.qgPassword}
+              onChange={(e) => setDraft({ ...draft, qgPassword: e.target.value })}
+            />
+          </label>
+          <label>
+            Téléphone
+            <input
+              required
+              value={draft.qgNumeroTelephone}
+              onChange={(e) => setDraft({ ...draft, qgNumeroTelephone: e.target.value })}
+              placeholder="+261 …"
+            />
+          </label>
+          <label>
+            Matricule (optionnel)
+            <input
+              value={draft.qgMatricule}
+              onChange={(e) => setDraft({ ...draft, qgMatricule: e.target.value })}
+            />
+          </label>
+        </fieldset>
+      ) : null}
       <div className="muted small admin-zone-vertices">
         Sommets : {draft.vertices.length}
         {draft.vertices.length > 0 && mapPlacementActive ? (
@@ -698,22 +863,15 @@ function ZoneEditor({
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
           Annuler
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() =>
-            void onSave({
-              nom: draft.nom.trim(),
-              type: draft.type,
-              code: draft.code.trim(),
-              numeroQg: draft.numeroQg.trim() || null,
-              geometrie: geojson,
-            })
-          }
-        >
-          {draft.id ? 'Enregistrer' : 'Créer la zone'}
+        <button type="submit" className="btn btn-primary">
+          {draft.id
+            ? 'Enregistrer'
+            : draft.type === 'ARRONDISSEMENT'
+              ? 'Créer la commune et le QG'
+              : 'Créer la zone'}
         </button>
       </div>
+      </form>
     </section>
   );
 }

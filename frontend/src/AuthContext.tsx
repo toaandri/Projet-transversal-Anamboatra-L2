@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, getToken, setToken } from './api';
+import { api, clearAllAuthStorage, getToken, setToken } from './api';
 import type { User } from './types';
 import { AuthContext } from './authContext';
 
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user: u } = await api.me();
       setUser(u);
     } catch {
-      setToken(null);
+      clearAllAuthStorage();
       setUser(null);
     }
   }, []);
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
+    clearAllAuthStorage();
     setUser(null);
   }, []);
 

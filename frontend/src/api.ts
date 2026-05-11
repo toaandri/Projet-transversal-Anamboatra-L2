@@ -34,6 +34,12 @@ export function setAdminToken(t: string | null) {
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
+/** Supprime jeton staff + jeton admin (session navigateur / Electron). */
+export function clearAllAuthStorage() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!text) return {} as T;
@@ -124,7 +130,7 @@ export const api = {
 
   tickets: () => request<{ tickets: Ticket[] }>('/api/tickets'),
 
-  ticket: (id: string) => request<{ ticket: Ticket }>(`/api/tickets/${id}`),
+  ticket: (id: string) => request<{ ticket: Ticket }>(`/api/tickets/${encodeURIComponent(id)}`),
 
   patchTicket: (id: string, body: Record<string, unknown>) =>
     request<{ ticket: Ticket }>(`/api/tickets/${id}`, { method: 'PATCH', json: body }),

@@ -82,6 +82,8 @@ type FeatureProps = {
   photoSignalement?: string;
   dateSignalement?: string;
   dateSoumission?: string;
+  /** Photo après travaux (clôture mission), si déjà fournie. */
+  photoCloture?: string | null;
 };
 
 function propsOf(f: GeoJsonFeature): FeatureProps {
@@ -278,7 +280,7 @@ export function MapView({
               }}
               pixelOffset={[0, -18]}
               headerDisabled
-              maxWidth={340}
+              maxWidth={380}
               onCloseClick={() => setSelectedIdx(null)}
             >
               <FeaturePopup
@@ -531,6 +533,8 @@ function FeaturePopup({
   const statutColor = STATUT_COLORS[statut];
   const typeColor = p.typeInfrastructure ? TYPE_COLORS[p.typeInfrastructure] : '#64748b';
   const typeLabel = p.typeInfrastructure ? TYPE_LABELS[p.typeInfrastructure] : 'Inconnu';
+  const photoApres =
+    typeof p.photoCloture === 'string' && p.photoCloture.trim() ? p.photoCloture.trim() : '';
 
   return (
     <div className="anam-popup anam-popup--ticket">
@@ -539,30 +543,53 @@ function FeaturePopup({
         ×
       </button>
 
-      {p.photoSignalement ? (
-        <a
-          href={p.photoSignalement}
-          target="_blank"
-          rel="noreferrer"
-          className="anam-popup-photo"
-          style={{ backgroundImage: `url(${p.photoSignalement})` }}
-        >
-          <span className="anam-popup-photo-shade" />
-          <span className="anam-popup-photo-badge">
-            <span className="anam-popup-dot" style={{ background: statutColor }} />
-            {STATUT_LABELS[statut]}
-          </span>
-          {p.urgence === 'URGENT' ? <span className="anam-popup-photo-urgent">URGENT</span> : null}
-        </a>
-      ) : (
-        <div className="anam-popup-photo anam-popup-photo--placeholder">
-          <span className="anam-popup-photo-badge">
-            <span className="anam-popup-dot" style={{ background: statutColor }} />
-            {STATUT_LABELS[statut]}
-          </span>
-          {p.urgence === 'URGENT' ? <span className="anam-popup-photo-urgent">URGENT</span> : null}
+      <div className="anam-popup-photos-row" role="group" aria-label="Photos avant et après travaux">
+        <div className="anam-popup-photo-cell">
+          <span className="anam-popup-photo-caption">Avant travaux</span>
+          {p.photoSignalement ? (
+            <a
+              href={p.photoSignalement}
+              target="_blank"
+              rel="noreferrer"
+              className="anam-popup-photo"
+              style={{ backgroundImage: `url(${p.photoSignalement})` }}
+            >
+              <span className="anam-popup-photo-shade" />
+              <span className="anam-popup-photo-badge">
+                <span className="anam-popup-dot" style={{ background: statutColor }} />
+                {STATUT_LABELS[statut]}
+              </span>
+              {p.urgence === 'URGENT' ? <span className="anam-popup-photo-urgent">URGENT</span> : null}
+            </a>
+          ) : (
+            <div className="anam-popup-photo anam-popup-photo--placeholder">
+              <span className="anam-popup-photo-badge">
+                <span className="anam-popup-dot" style={{ background: statutColor }} />
+                {STATUT_LABELS[statut]}
+              </span>
+              {p.urgence === 'URGENT' ? <span className="anam-popup-photo-urgent">URGENT</span> : null}
+            </div>
+          )}
         </div>
-      )}
+        <div className="anam-popup-photo-cell">
+          <span className="anam-popup-photo-caption">Après travaux</span>
+          {photoApres ? (
+            <a
+              href={photoApres}
+              target="_blank"
+              rel="noreferrer"
+              className="anam-popup-photo"
+              style={{ backgroundImage: `url(${photoApres})` }}
+            >
+              <span className="anam-popup-photo-shade" />
+            </a>
+          ) : (
+            <div className="anam-popup-photo anam-popup-photo--placeholder anam-popup-photo--after-pending">
+              <span className="anam-popup-after-pending-text">Pas encore de photo</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="anam-popup-body">
         <div className="anam-popup-eyebrow">

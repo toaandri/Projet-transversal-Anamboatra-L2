@@ -1,9 +1,9 @@
 const express = require('express');
-const { Op } = require('sequelize');
 const { body, validationResult } = require('express-validator');
 const { Ticket, SuggestionCitoyen, Zone } = require('../models/postgres');
-const { buildMapPayload } = require('../services/mapFilterService');
-const { StatutEnum, MapRole, TypeEnum } = require('../constants/enums');
+const { buildMapPayload, publicTicketsInZoneWhere, publicTicketsNationalWhere } = require('../services/mapFilterService');
+const { MapRole, TypeEnum } = require('../constants/enums');
+const { mapScopeZoneIdFromQuery } = require('../utils/mapScopeZone');
 
 const router = express.Router();
 
@@ -16,20 +16,11 @@ router.get('/zones', async (_req, res) => {
   return res.json({ zones });
 });
 
-/** Tickets jamais « en attente » côté public (CDC 8.3). */
-router.get('/tickets', async (_req, res) => {
+/** Tickets « vitrine » nationaux ; `?zoneId=` restreint à une commune si besoin. */
+router.get('/tickets', async (req, res) => {
+  const mapScopeZoneId = mapScopeZoneIdFromQuery(req.query.zoneId);
   const tickets = await Ticket.findAll({
-    where: {
-      visiblePublic: true,
-      statut: {
-        [Op.in]: [
-          StatutEnum.REPARATION_PREVUE,
-          StatutEnum.EN_REPARATION,
-          StatutEnum.TERMINE,
-          StatutEnum.CLOTURE,
-        ],
-      },
-    },
+    where: mapScopeZoneId ? publicTicketsInZoneWhere(mapScopeZoneId) : publicTicketsNationalWhere(),
     order: [['updatedAt', 'DESC']],
   });
   return res.json({ tickets });

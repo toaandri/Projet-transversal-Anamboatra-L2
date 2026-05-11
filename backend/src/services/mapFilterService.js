@@ -1,7 +1,7 @@
 const { Op, literal } = require('sequelize');
 const { sequelize } = require('../config/postgres');
 const { Ticket, SuggestionCitoyen } = require('../models/postgres');
-const { RoleEnum, StatutEnum, MapRole, TypeEnum } = require('../constants/enums');
+const { RoleEnum, StatutEnum, MapRole } = require('../constants/enums');
 
 const statutsPublics = [
   StatutEnum.REPARATION_PREVUE,
@@ -10,49 +10,55 @@ const statutsPublics = [
   StatutEnum.CLOTURE,
 ];
 
+/**
+ * Tickets « vitrine » : tous les dossiers publics approuvés, visible à l’échelle nationale.
+ */
+function publicTicketsNationalWhere() {
+  return {
+    visiblePublic: true,
+    statut: { [Op.in]: statutsPublics },
+  };
+}
+
+/**
+ * Filtre optionnel par commune (ex. API `?zoneId=`) — même règle métier que la vitrine, mais localisé.
+ */
+function publicTicketsInZoneWhere(mapScopeZoneId) {
+  if (!mapScopeZoneId) {
+    return { id: { [Op.in]: [] } };
+  }
+  return {
+    visiblePublic: true,
+    statut: { [Op.in]: statutsPublics },
+    zoneId: mapScopeZoneId,
+  };
+}
+
 /** Filtre Sequelize pour les tickets visibles selon le rôle (remplace l’ancien filtre Mongo). */
 function ticketVisibilityWhere(principal) {
-  if (!principal || principal.type === MapRole.PUBLIC || principal.role === RoleEnum.CITOYEN) {
-    return {
-      visiblePublic: true,
-      statut: { [Op.in]: statutsPublics },
-    };
+  if (!principal || principal.type === MapRole.PUBLIC) {
+    return publicTicketsNationalWhere();
+  }
+
+  if (principal.role === RoleEnum.CITOYEN) {
+    return publicTicketsNationalWhere();
   }
 
   const { role, zoneId, userId } = principal;
 
   if (role === RoleEnum.AGENT_PATROUILLE) {
-    return {
-      [Op.or]: [
-        { zoneId, statut: StatutEnum.EN_ATTENTE_CONFIRMATION },
-        { statut: { [Op.in]: statutsPublics } },
-      ],
-    };
+    return { zoneId };
   }
 
   if (role === RoleEnum.ADMIN_QG) {
-    // Réseau « type JIRAMA » : hors compétence de la commune (pas de lecture opérationnelle).
-    return {
-      zoneId,
-      typeInfrastructure: { [Op.ne]: TypeEnum.ELECTRICITE },
-    };
+    return { zoneId };
   }
 
   if (role === RoleEnum.EQUIPE_INTERVENTION) {
-    // Sequelize utilise le nom du modèle ("Ticket") comme alias, pas le nom
-    // de table ("tickets") — il faut donc citer "Ticket"."mission".
     const assignedLiteral = literal(
       `EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE("Ticket"."mission"->'assignedUserIds', '[]'::jsonb)) AS elem WHERE elem = ${sequelize.escape(userId)})`,
     );
-    return {
-      [Op.or]: [
-        assignedLiteral,
-        {
-          zoneId,
-          statut: { [Op.in]: statutsPublics },
-        },
-      ],
-    };
+    return { [Op.or]: [assignedLiteral] };
   }
 
   return { id: { [Op.in]: [] } };
@@ -62,9 +68,6 @@ function suggestionsWhere(principal) {
   if (!principal || principal.type === MapRole.PUBLIC || principal.role === RoleEnum.CITOYEN) {
     return null;
   }
-  if (principal.role === RoleEnum.EQUIPE_INTERVENTION) {
-    return null;
-  }
   if (principal.role === RoleEnum.AGENT_PATROUILLE) {
     return { zoneId: principal.zoneId, traitee: false };
   }
@@ -72,8 +75,16 @@ function suggestionsWhere(principal) {
     return {
       zoneId: principal.zoneId,
       traitee: false,
-      typeSuggere: { [Op.ne]: TypeEnum.ELECTRICITE },
     };
+  }
+  if (principal.role === RoleEnum.EQUIPE_INTERVENTION) {
+    const uid = String(principal.userId);
+    const needle = sequelize.escape(JSON.stringify([uid]));
+    return literal(`EXISTS (
+      SELECT 1 FROM tickets AS t
+      WHERE t.zone_id = "SuggestionCitoyen"."zone_id"
+      AND COALESCE(t.mission->'assignedUserIds', '[]'::jsonb) @> ${needle}::jsonb
+    )`);
   }
   return null;
 }
@@ -121,6 +132,7 @@ async function buildMapPayload(principal) {
         dateSignalement: t.dateSignalement,
         description: t.description,
         photoSignalement: t.photoSignalement,
+        photoCloture: t.mission?.photoCloture || null,
       },
     };
   });
@@ -157,4 +169,6 @@ module.exports = {
   buildMapPayload,
   ticketVisibilityWhere,
   suggestionsWhere,
+  publicTicketsInZoneWhere,
+  publicTicketsNationalWhere,
 };

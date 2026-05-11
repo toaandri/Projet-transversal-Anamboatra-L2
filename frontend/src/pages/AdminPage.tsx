@@ -1,4 +1,4 @@
-/** Référentiel territorial national — console administration (MTP / Anamboatra). */
+/** Console nationale MTP — référentiel territorial et comptes QG (Anamboatra). */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -36,7 +36,7 @@ type AdminMode = 'jwt' | 'token';
 type Tab = 'zones' | 'qg';
 
 const ZONE_TYPE_LABEL: Record<TypeZone, string> = {
-  ARRONDISSEMENT: 'Arrondissement / Commune',
+  ARRONDISSEMENT: 'Commune ou arrondissement',
   ROUTE_NATIONALE: 'Route nationale',
   DEPOT_REPARATION: 'Dépôt de réparation',
 };
@@ -237,7 +237,7 @@ export function AdminPage() {
       } catch (e) {
         setAdminToken(null);
         setMode(null);
-        setErr(e instanceof Error ? e.message : 'Jeton invalide');
+        setErr(e instanceof Error ? e.message : 'Jeton d’accès refusé ou expiré.');
       } finally {
         setChecking(false);
       }
@@ -260,23 +260,23 @@ export function AdminPage() {
     return (
       <div className="page center">
         <div className="panel" style={{ maxWidth: 460, width: '100%' }}>
-          <h2 style={{ marginBottom: 6 }}>Administration nationale</h2>
+          <h2 style={{ marginBottom: 6 }}>Console nationale — Anamboatra</h2>
           <p className="muted small" style={{ marginTop: 0, marginBottom: 16, lineHeight: 1.45 }}>
-            Ministère des Travaux Publics — référentiel géographique et gestion centralisée des comptes
-            administrateurs communaux Anamboatra.
+            Référentiel territorial et administration des comptes quartier général (MTP). Accès réservé aux
+            profils d’ingénierie et de pilotage habilités.
           </p>
           {user?.role && user.role !== 'SUPER_ADMIN' ? (
             <p className="alert error">
-              Ce compte ne dispose pas des habilitations administration nationale.
+              Ce compte n’est pas habilité pour la console nationale.
             </p>
           ) : null}
           <div className="row" style={{ marginBottom: 12 }}>
             <Link to="/" className="btn btn-primary">
-              Connexion super-administrateur
+              Authentification super-administrateur
             </Link>
           </div>
           <details>
-            <summary className="muted small">Jeton d&apos;installation</summary>
+            <summary className="muted small">Accès par jeton d’installation</summary>
             <form
               className="form"
               onSubmit={(e) => {
@@ -285,18 +285,18 @@ export function AdminPage() {
               }}
             >
               <label>
-                Jeton
+                Jeton sécurisé
                 <input
                   type="password"
                   autoComplete="off"
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="Token"
+                  placeholder="Saisir le jeton"
                 />
               </label>
               {err ? <p className="alert error">{err}</p> : null}
               <button type="submit" className="btn btn-ghost" disabled={checking}>
-                {checking ? 'Vérification…' : 'Valider'}
+                {checking ? 'Contrôle en cours…' : 'Valider l’accès'}
               </button>
             </form>
           </details>
@@ -344,7 +344,7 @@ export function AdminPage() {
               {mode === 'jwt' && (user?.prenom || user?.nom)
                 ? ` · ${`${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim()}`
                 : mode === 'token'
-                  ? ' · accès installation (jeton)'
+                  ? ' · session jeton d’installation'
                   : ''}
             </div>
           </div>
@@ -355,7 +355,7 @@ export function AdminPage() {
             className="btn btn-ghost"
             onClick={() => setMapVisible((v) => !v)}
             aria-pressed={!mapVisible}
-            title={mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+            title={mapVisible ? 'Masquer le fond cartographique' : 'Afficher le fond cartographique'}
           >
             {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
           </button>
@@ -388,8 +388,8 @@ export function AdminPage() {
               <div className="muted small">Anamboatra</div>
               <div className="muted" style={{ marginTop: 6, fontSize: '0.88rem' }}>
                 {mode === 'jwt'
-                  ? `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || 'Administrateur national'
-                  : 'Accès installation (jeton)'}
+                  ? `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || 'Super-administrateur MTP'
+                  : 'Session jeton d’installation'}
               </div>
             </div>
           </div>
@@ -399,6 +399,7 @@ export function AdminPage() {
               className="btn btn-ghost"
               onClick={() => setMapVisible((v) => !v)}
               aria-pressed={!mapVisible}
+              title={mapVisible ? 'Masquer le fond cartographique' : 'Afficher le fond cartographique'}
             >
               {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
             </button>
@@ -412,19 +413,19 @@ export function AdminPage() {
 
           <section className="admin-kpi-grid" aria-label="Indicateurs du référentiel">
             <div className="admin-kpi-card">
-              <span className="admin-kpi-label">Zones</span>
+              <span className="admin-kpi-label">Entités</span>
               <strong className="admin-kpi-value">{zoneCountByType.all}</strong>
             </div>
             <div className="admin-kpi-card">
-              <span className="admin-kpi-label">Arrond.</span>
+              <span className="admin-kpi-label">Communes</span>
               <strong className="admin-kpi-value">{zoneCountByType.arr}</strong>
             </div>
             <div className="admin-kpi-card">
-              <span className="admin-kpi-label">Axes</span>
+              <span className="admin-kpi-label">Axes RN</span>
               <strong className="admin-kpi-value">{zoneCountByType.route}</strong>
             </div>
             <div className="admin-kpi-card admin-kpi-card-wide">
-              <span className="admin-kpi-label">Admins QG actifs</span>
+              <span className="admin-kpi-label">Comptes QG actifs</span>
               <strong className="admin-kpi-value">{admins.filter((a) => a.actif).length}</strong>
             </div>
           </section>
@@ -435,14 +436,14 @@ export function AdminPage() {
               className={tab === 'zones' ? 'chip on' : 'chip'}
               onClick={() => setTab('zones')}
             >
-              Communes & axes
+              Périmètres et axes
             </button>
             <button
               type="button"
               className={tab === 'qg' ? 'chip on' : 'chip'}
               onClick={() => setTab('qg')}
             >
-              Admins QG
+              Comptes QG
             </button>
           </div>
 
@@ -460,7 +461,7 @@ export function AdminPage() {
                       setSideOpen(true);
                     }}
                   >
-                    Nouvelle zone
+                    Nouveau périmètre
                   </button>
                 </div>
               ) : null}
@@ -481,7 +482,7 @@ export function AdminPage() {
                     setErr(null);
                     if (draft.id) {
                       await api.adminUpdateZone(draft.id, payload, adminOpts);
-                      setMsg('Zone mise à jour.');
+                      setMsg('Enregistrement effectué.');
                     } else {
                       const { zone } = await api.adminCreateZone(payload, adminOpts);
                       if (qgAdmin) {
@@ -490,25 +491,25 @@ export function AdminPage() {
                             { zoneId: zone.id, ...qgAdmin },
                             adminOpts,
                           );
-                          setMsg(`Commune créée · compte QG ${qgAdmin.email}`);
+                          setMsg(`Périmètre créé · compte QG : ${qgAdmin.email}`);
                         } catch (e2) {
                           setErr(
                             e2 instanceof Error
                               ? e2.message
-                              : 'Erreur création administrateur',
+                              : 'Échec de création du compte administrateur.',
                           );
                           setMsg(
-                            `Commune « ${zone.nom} » créée. Créez le compte admin depuis l’onglet Admins QG si besoin.`,
+                            `Périmètre « ${zone.nom} » enregistré. Création du compte QG à finaliser sous l’onglet Comptes QG.`,
                           );
                         }
                       } else {
-                        setMsg('Zone créée.');
+                        setMsg('Périmètre créé.');
                       }
                     }
                     resetNewZoneFlow();
                     await runRefresh();
                   } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
+                    setErr(e instanceof Error ? e.message : 'Échec de l’opération.');
                   }
                 }}
                 onCancel={() => {
@@ -551,14 +552,14 @@ export function AdminPage() {
                 }}
                 onDelete={async (z) => {
                   if (z.type === 'DEPOT_REPARATION') return;
-                  if (!confirm(`Supprimer la zone "${z.nom}" ? Irréversible.`)) return;
+                  if (!confirm(`Supprimer définitivement « ${z.nom} » ?`)) return;
                   try {
                     setErr(null);
                     await api.adminDeleteZone(z.id, adminOpts);
-                    setMsg('Zone supprimée.');
+                    setMsg('Suppression enregistrée.');
                     await runRefresh();
                   } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
+                    setErr(e instanceof Error ? e.message : 'Échec de l’opération.');
                   }
                 }}
               />
@@ -575,10 +576,10 @@ export function AdminPage() {
                   try {
                     setErr(null);
                     await api.adminCreateQgAdmin(body, adminOpts);
-                    setMsg(`Admin QG ${body.email} créé.`);
+                    setMsg(`Compte QG créé : ${body.email}`);
                     await runRefresh();
                   } catch (e) {
-                    setErr(e instanceof Error ? e.message : 'Erreur');
+                    setErr(e instanceof Error ? e.message : 'Échec de l’opération.');
                   }
                 }}
               />
@@ -652,11 +653,11 @@ function ZoneEditor({
 
   return (
     <section className="form bubble-card">
-      <h3>{draft.id ? 'Modifier la zone' : 'Nouvelle zone'}</h3>
+      <h3>{draft.id ? 'Modification du périmètre' : 'Création d’un périmètre'}</h3>
       {isNewZone && carteVisible && !mapPlacementActive && onBeginMapPlacement ? (
         <div
           role="region"
-          aria-label="Carte"
+          aria-label="Saisie cartographique"
           style={{
             marginBottom: 14,
             padding: '12px 14px',
@@ -666,20 +667,20 @@ function ZoneEditor({
           }}
         >
           <button type="button" className="btn btn-primary" onClick={() => onBeginMapPlacement()}>
-            Carte · placer et tracer
+            Saisie cartographique — placer et tracer
           </button>
         </div>
       ) : null}
       {isNewZone && carteVisible && mapPlacementActive && onCancelMapPlacement ? (
         <div style={{ marginBottom: 14 }}>
           <button type="button" className="btn btn-ghost" onClick={() => onCancelMapPlacement()}>
-            Quitter le mode carte
+            Quitter la saisie cartographique
           </button>
         </div>
       ) : null}
       {!carteVisible ? (
         <p className="muted small admin-form-intro" role="status">
-          Carte masquée.
+          Fond cartographique masqué — réactivez-le pour saisir ou modifier la géométrie.
         </p>
       ) : null}
       <form
@@ -730,7 +731,7 @@ function ZoneEditor({
         }}
       >
       <label>
-        Nom
+        Dénomination
         <input
           required
           value={draft.nom}
@@ -752,7 +753,7 @@ function ZoneEditor({
         </select>
       </label>
       <label>
-        Code
+        Code référence
         <input
           required
           value={draft.code}
@@ -761,7 +762,7 @@ function ZoneEditor({
         />
       </label>
       <label>
-        Numéro de contact (optionnel)
+        Téléphone de contact (facultatif)
         <input
           value={draft.numeroQg}
           onChange={(e) => setDraft({ ...draft, numeroQg: e.target.value })}
@@ -782,10 +783,10 @@ function ZoneEditor({
           }}
         >
           <legend className="small" style={{ fontWeight: 700, padding: '0 6px' }}>
-            Administrateur QG de la commune
+            Premier compte administrateur QG
           </legend>
           <p className="muted small" style={{ marginTop: 0, marginBottom: 12, lineHeight: 1.45 }}>
-            Identifiants du premier responsable : même compte que sur l&apos;onglet « Admins QG ».
+            Données du responsable local ; identiques au formulaire de l’onglet Comptes QG.
           </p>
           <label>
             Nom
@@ -804,11 +805,11 @@ function ZoneEditor({
             />
           </label>
           <label>
-            E-mail
+            Courriel
             <OrgEmailLocalField required value={draft.qgEmailLocal} onChange={(v) => setDraft({ ...draft, qgEmailLocal: v })} />
           </label>
           <label>
-            Mot de passe (≥ 8 caractères)
+            Mot de passe (8 caractères minimum)
             <input
               type="password"
               required
@@ -828,7 +829,7 @@ function ZoneEditor({
             />
           </label>
           <label>
-            Matricule (optionnel)
+            Matricule (facultatif)
             <input
               value={draft.qgMatricule}
               onChange={(e) => setDraft({ ...draft, qgMatricule: e.target.value })}
@@ -837,7 +838,7 @@ function ZoneEditor({
         </fieldset>
       ) : null}
       <div className="muted small admin-zone-vertices">
-        Sommets : {draft.vertices.length}
+        Sommets du polygone : {draft.vertices.length}
         {draft.vertices.length > 0 && mapPlacementActive ? (
           <>
             {' · '}
@@ -846,7 +847,7 @@ function ZoneEditor({
               className="btn btn-ghost small"
               onClick={() => setDraft({ ...draft, vertices: draft.vertices.slice(0, -1) })}
             >
-              Annuler le dernier
+              Retirer le dernier point
             </button>
             {' · '}
             <button
@@ -854,7 +855,7 @@ function ZoneEditor({
               className="btn btn-ghost small"
               onClick={() => setDraft({ ...draft, vertices: [] })}
             >
-              Tout effacer
+              Effacer la géométrie
             </button>
           </>
         ) : null}
@@ -865,10 +866,10 @@ function ZoneEditor({
         </button>
         <button type="submit" className="btn btn-primary">
           {draft.id
-            ? 'Enregistrer'
+            ? 'Enregistrer les modifications'
             : draft.type === 'ARRONDISSEMENT'
-              ? 'Créer la commune et le QG'
-              : 'Créer la zone'}
+              ? 'Créer la commune et le compte QG'
+              : 'Enregistrer l’axe routier'}
         </button>
       </div>
       </form>
@@ -885,9 +886,11 @@ function ZoneList({
   onEdit: (z: Zone) => void;
   onDelete: (z: Zone) => Promise<void> | void;
 }) {
+  /** Dépôts de réparation : gérés hors de cet écran. */
+  const listZones = useMemo(() => zones.filter((z) => z.type !== 'DEPOT_REPARATION'), [zones]);
   const [filter, setFilter] = useState<'ALL' | SuperAdminZoneType>('ALL');
   const [query, setQuery] = useState('');
-  const filtered = zones.filter((z) => {
+  const filtered = listZones.filter((z) => {
     if (filter !== 'ALL' && z.type !== filter) return false;
     const q = normalizeText(query);
     if (!q) return true;
@@ -899,13 +902,13 @@ function ZoneList({
   });
   return (
     <section className="kanban">
-      <h3>Territoires ({zones.length})</h3>
+      <h3>Périmètres ({listZones.length})</h3>
       <label className="small muted">
-        Rechercher
+        Filtrer
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Nom, code…"
+          placeholder="Nom, code, téléphone…"
         />
       </label>
       <div className="chips" style={{ marginBottom: 6 }}>
@@ -916,12 +919,12 @@ function ZoneList({
             className={filter === t ? 'chip on' : 'chip'}
             onClick={() => setFilter(t)}
           >
-            {t === 'ALL' ? 'Toutes' : ZONE_TYPE_LABEL[t as TypeZone]}
+            {t === 'ALL' ? 'Tous les types' : ZONE_TYPE_LABEL[t as TypeZone]}
           </button>
         ))}
       </div>
       {filtered.length === 0 ? (
-        <p className="muted small">Aucun territoire.</p>
+        <p className="muted small">Aucun enregistrement ne correspond aux critères.</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {filtered.map((z) => (
@@ -931,26 +934,20 @@ function ZoneList({
                 <div className="muted small">
                   {z.code} · {ZONE_TYPE_LABEL[z.type as TypeZone] || z.type}
                   {z.numeroQg ? ` · ${z.numeroQg}` : ''}
-                  {z.geometrie ? ' · cartographié' : ''}
+                  {z.geometrie ? ' · géométrie renseignée' : ''}
                 </div>
               </div>
               <div className="admin-list-item-actions">
-                {z.type === 'DEPOT_REPARATION' ? (
-                  <span className="muted small">Référentiel</span>
-                ) : (
-                  <>
-                    <button type="button" className="btn btn-ghost small" onClick={() => onEdit(z)}>
-                      Éditer
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost small"
-                      onClick={() => void onDelete(z)}
-                    >
-                      Suppr.
-                    </button>
-                  </>
-                )}
+                <button type="button" className="btn btn-ghost small" onClick={() => onEdit(z)}>
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost small"
+                  onClick={() => void onDelete(z)}
+                >
+                  Supprimer
+                </button>
               </div>
             </li>
           ))}
@@ -985,15 +982,15 @@ function QgAdminForm({
 
   return (
     <section className="form bubble-card">
-      <h3>Nouvel administrateur QG</h3>
+      <h3>Création d’un compte QG</h3>
       {zones.length === 0 ? (
-        <p className="muted small">Créez un territoire dans l&apos;onglet précédent.</p>
+        <p className="muted small">Créez d’abord un périmètre dans l’onglet précédent.</p>
       ) : (
         <>
           <label>
-            Zone
+            Périmètre d’affectation
             <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} required>
-              <option value="">— choisir —</option>
+              <option value="">— Sélectionner —</option>
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.nom} ({z.code})
@@ -1010,11 +1007,11 @@ function QgAdminForm({
             <input required value={prenom} onChange={(e) => setPrenom(e.target.value)} />
           </label>
           <label>
-            E-mail
+            Courriel
             <OrgEmailLocalField required value={emailLocal} onChange={setEmailLocal} />
           </label>
           <label>
-            Mot de passe (≥ 8 caractères)
+            Mot de passe (8 caractères minimum)
             <input
               type="password"
               required
@@ -1033,7 +1030,7 @@ function QgAdminForm({
             />
           </label>
           <label>
-            Matricule (optionnel)
+            Matricule (facultatif)
             <input value={matricule} onChange={(e) => setMatricule(e.target.value)} />
           </label>
           <div className="row admin-form-actions">
@@ -1075,7 +1072,7 @@ function QgAdminForm({
                 setMatricule('');
               }}
             >
-              Créer Admin QG
+              Créer le compte
             </button>
           </div>
         </>
@@ -1088,15 +1085,15 @@ function QgAdminList({ admins, zones }: { admins: AdminQg[]; zones: Zone[] }) {
   const zoneById = useMemo(() => Object.fromEntries(zones.map((z) => [z.id, z])), [zones]);
   return (
     <section className="kanban">
-      <h3>Administrateurs QG ({admins.length})</h3>
+      <h3>Comptes QG ({admins.length})</h3>
       {admins.length === 0 ? (
-        <p className="muted small">Aucun enregistrement.</p>
+        <p className="muted small">Aucun compte enregistré.</p>
       ) : (
         <ul className="admin-qg-list">
           {admins.map((a) => (
             <li key={a.id} className="admin-qg-item">
               <div className="admin-qg-item-title">
-                {a.prenom} {a.nom} {a.actif ? '' : '· SUSPENDU'}
+                {a.prenom} {a.nom} {a.actif ? '' : '· compte désactivé'}
               </div>
               <div className="muted small">
                 {a.email} · {a.zoneId ? zoneById[a.zoneId]?.nom || a.zoneId : '—'}{' '}
@@ -1136,9 +1133,9 @@ function PolygonPicker({
     return (
       <div className="map-missing">
         <div>
-          <strong>Configurer la carte</strong>
+          <strong>Cartographie</strong>
           <p className="muted small">
-            Variable <code>VITE_GOOGLE_MAPS_API_KEY</code> (<code>.env.local</code>).
+            Définir la variable d’environnement <code>VITE_GOOGLE_MAPS_API_KEY</code> (fichier <code>.env.local</code>).
           </p>
           <textarea
             className="geo-textarea"
@@ -1362,7 +1359,7 @@ function PolygonPicker({
               onChange={(e) => setSelectedZoneId(e.target.value)}
               style={{ minWidth: 230 }}
             >
-              <option value="">Commune…</option>
+              <option value="">Commune de référence…</option>
               {filteredCommunes.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.nom} ({REGION_LABELS[z.region]})
@@ -1374,12 +1371,12 @@ function PolygonPicker({
         {interactionEnabled ? (
           stage === 'pick' ? (
             <button type="button" className="btn btn-primary" onClick={confirmLocation}>
-              Confirmer cet emplacement
+              Valider le point d’ancrage
             </button>
           ) : (
             <>
               <button type="button" className="btn btn-primary" disabled>
-                Polygone — ajouter les sommets par clic carte
+                Délimitation — cliquer pour placer chaque sommet
               </button>
               <button
                 type="button"
@@ -1387,10 +1384,10 @@ function PolygonPicker({
                 onClick={() => onChange(vertices.slice(0, -1))}
                 disabled={vertices.length === 0}
               >
-                Annuler dernier sommet
+                Annuler le dernier sommet
               </button>
               <button type="button" className="btn btn-ghost" onClick={resetLocation}>
-                Reprendre la désignation du centre
+                Redéfinir le point d’ancrage
               </button>
             </>
           )
@@ -1400,12 +1397,12 @@ function PolygonPicker({
       {interactionEnabled ? (
         stage === 'pick' ? (
           <p className="muted small" style={{ margin: 0 }}>
-            Cliquer pour positionner le centre administratif puis valider.
+            Cliquer sur la carte pour positionner le centre, puis valider.
           </p>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             <p className="muted small" style={{ margin: 0 }}>
-              Sommets du polygone dans l&apos;ordre — le contour se ferme automatiquement.
+              Sommets dans l’ordre de parcours — fermeture automatique du polygone.
             </p>
             {vertices.length >= 3 ? (
               <p className="muted small" style={{ margin: 0 }}>
@@ -1478,14 +1475,14 @@ function PolygonPicker({
           {interactionEnabled && confirmedCenter ? (
             <Marker
               position={confirmedCenter}
-              title="Centre commune confirmé"
+              title="Point d’ancrage validé"
               icon={centerIcon}
               label={{ text: 'C', color: 'white', fontSize: '12px', fontWeight: '700' }}
             />
           ) : interactionEnabled && pickedCenter ? (
             <Marker
               position={pickedCenter}
-              title="Centre choisi (non confirmé)"
+              title="Point d’ancrage provisoire"
               icon={centerIcon}
               label={{ text: 'C', color: 'white', fontSize: '12px', fontWeight: '700' }}
             />
@@ -1534,8 +1531,8 @@ function PolygonPicker({
               >
                 {stage === 'pick'
                   ? pickedCenter
-                    ? 'Valider avant de tracer le périmètre'
-                    : 'Pointer le centre territorial sur la carte'
+                    ? 'Valider avant de poursuivre la délimitation'
+                    : 'Indiquer le centre sur la carte'
                   : `${vertices.length} sommet${vertices.length > 1 ? 's' : ''}`}
               </div>
             </div>

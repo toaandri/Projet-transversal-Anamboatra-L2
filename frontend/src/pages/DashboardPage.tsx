@@ -140,7 +140,7 @@ export function DashboardPage() {
       }
       setErr(null);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Chargement impossible');
+      setErr(e instanceof Error ? e.message : 'Échec du chargement des données.');
     }
   }, [user]);
 
@@ -213,7 +213,7 @@ export function DashboardPage() {
         setErr(null);
       } catch {
         setSelectedSuggestion(null);
-        setErr('Référence de suggestion inconnue ou profil non habilité.');
+        setErr('Référence introuvable ou habilitation insuffisante.');
       }
       return;
     }
@@ -257,7 +257,7 @@ export function DashboardPage() {
         <div className="brand">
           <span className="logo" />
           <div>
-            <strong>{role === 'CITOYEN' ? 'Espace citoyen · Anamboatra' : 'Tableau de bord'}</strong>
+            <strong>{role === 'CITOYEN' ? 'Espace citoyen — Anamboatra' : 'Suivi des interventions'}</strong>
             <div className="muted small">
               {user?.prenom} {user?.nom} · {role ? ROLE_LABELS[role] : ''}
             </div>
@@ -292,7 +292,7 @@ export function DashboardPage() {
               ) : (
                 <>
                   <small>Ministère des Travaux Publics</small>
-                  <strong>Quartier général · Anamboatra</strong>
+                  <strong>Quartier général — Anamboatra</strong>
                 </>
               )}
               <div className="muted">
@@ -307,7 +307,7 @@ export function DashboardPage() {
               className="btn btn-ghost"
               onClick={() => setMapVisible((v) => !v)}
               aria-pressed={!mapVisible}
-              title={mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
+              title={mapVisible ? 'Masquer le fond cartographique' : 'Afficher le fond cartographique'}
             >
               {mapVisible ? 'Masquer la carte' : 'Afficher la carte'}
             </button>
@@ -324,8 +324,8 @@ export function DashboardPage() {
           </div>
 
           {role === 'ADMIN_QG' ? (
-            <nav className="qg-nav" aria-label="Navigation quartier général">
-              <span className="qg-nav-label">Menu</span>
+            <nav className="qg-nav" aria-label="Navigation QG">
+              <span className="qg-nav-label">Vues</span>
               <div className="qg-nav-row">
                 <button
                   type="button"
@@ -360,7 +360,7 @@ export function DashboardPage() {
             <div className="qg-stats-strip">
               <div className="qg-stat">
                 <span className="qg-stat-value">{stats.total}</span>
-                <span className="qg-stat-label">Tickets</span>
+                <span className="qg-stat-label">Dossiers</span>
               </div>
               <div className="qg-stat qg-stat--red">
                 <span className="qg-stat-value">{stats.urgent}</span>
@@ -386,9 +386,9 @@ export function DashboardPage() {
             return (
               <section className="qg-section">
                 <header className="qg-section-head">
-                  <span className="qg-section-eyebrow">Carte</span>
+                  <span className="qg-section-eyebrow">Couche cartographique</span>
                   <div className="qg-section-titlerow">
-                    <h3>Filtres</h3>
+                    <h3>Critères d’affichage</h3>
                     {total > 0 ? (
                       <button
                         type="button"
@@ -398,7 +398,7 @@ export function DashboardPage() {
                         Réinitialiser ({total})
                       </button>
                     ) : (
-                      <span className="qg-section-meta">Aucun critère</span>
+                      <span className="qg-section-meta">Aucun filtre actif</span>
                     )}
                   </div>
                 </header>
@@ -440,7 +440,7 @@ export function DashboardPage() {
                 </div>
 
                 <div className="qg-filter">
-                  <div className="qg-filter-label">Type d'infrastructure</div>
+                  <div className="qg-filter-label">Type d’infrastructure</div>
                   <div className="chips">
                     {typeFilterChips.map((t) => (
                       <button
@@ -468,7 +468,7 @@ export function DashboardPage() {
               <header className="qg-section-head">
               <span className="qg-section-eyebrow">Terrain</span>
               <div className="qg-section-titlerow">
-                <h3>Actions</h3>
+                <h3>Actions terrain</h3>
                 </div>
               </header>
               <div className="qg-actions">
@@ -483,7 +483,7 @@ export function DashboardPage() {
                       setReportLng(null);
                     }}
                   >
-                    Nouveau signalement patrouille
+                    Nouveau constat patrouille
                   </button>
                 ) : null}
                 <button
@@ -496,14 +496,14 @@ export function DashboardPage() {
                         void api
                           .updatePosition(pos.coords.latitude, pos.coords.longitude)
                           .then(() => {
-                            setMsg('Position enregistrée côté serveur.');
+                            setMsg('Position transmise au serveur.');
                           });
                       },
-                      () => setErr('Géolocalisation indisponible ou refusée par l’appareil.'),
+                      () => setErr('Géolocalisation indisponible ou refusée.'),
                     );
                   }}
                 >
-                  Envoyer la position (GPS)
+                  Émettre la position (GPS)
                 </button>
               </div>
             </section>
@@ -521,7 +521,7 @@ export function DashboardPage() {
                 setPickEquipeLieu(true);
                 setMapVisible(true);
                 setErr(null);
-                  setMsg('Carte : indiquez l’emplacement de l’unité (cliquer dans le panneau carte).');
+                  setMsg('Carte : cliquez pour indiquer la position opérationnelle de l’unité.');
               }}
               onCancelMapPick={() => {
                 setPickEquipeLieu(false);
@@ -532,10 +532,12 @@ export function DashboardPage() {
           {role === 'ADMIN_QG' && qgMenuPage === 'signalements' ? (
             <section className="qg-section qg-section--kanban">
               <header className="qg-section-head">
-                <span className="qg-section-eyebrow">Suivi</span>
+                <span className="qg-section-eyebrow">Pilotage</span>
                 <div className="qg-section-titlerow">
-                  <h3>Liste des tickets par statut</h3>
-                  <span className="qg-section-meta">{filteredTickets.length} ticket{filteredTickets.length > 1 ? 's' : ''}</span>
+                  <h3>Répartition par statut</h3>
+                  <span className="qg-section-meta">
+                    {filteredTickets.length} dossier{filteredTickets.length > 1 ? 's' : ''}
+                  </span>
                 </div>
               </header>
               <div className="kanban-cols">
@@ -552,7 +554,7 @@ export function DashboardPage() {
                         <span className="kanban-count">{items.length}</span>
                       </div>
                       {items.length === 0 ? (
-                        <div className="kanban-empty">Aucun</div>
+                        <div className="kanban-empty">Aucun dossier</div>
                       ) : (
                         items.map((t) => (
                           <button
@@ -599,9 +601,9 @@ export function DashboardPage() {
           {(role !== 'ADMIN_QG' || qgMenuPage === 'signalements') ? (
           <section className="qg-section qg-section--detail" ref={detailRef}>
             <header className="qg-section-head">
-              <span className="qg-section-eyebrow">Fiche</span>
+              <span className="qg-section-eyebrow">Détail</span>
               <div className="qg-section-titlerow">
-                <h3>Détail</h3>
+                <h3>Fiche dossier</h3>
                 {selectedSuggestion ? (
                   <button
                     type="button"
@@ -635,7 +637,7 @@ export function DashboardPage() {
                 userId={user?.id}
                 onClearSelection={() => setSelected(null)}
                 onUpdated={async () => {
-                  setMsg('Dossier mis à jour.');
+                  setMsg('Mise à jour enregistrée.');
                   await load();
                   const { ticket } = await api.ticket(selected.id);
                   setSelected(ticket);
@@ -651,8 +653,8 @@ export function DashboardPage() {
                 </svg>
                 <p className="muted small">
                   {mapVisible
-                    ? 'Carte : sélectionnez un ticket ou une suggestion, ou une entrée du tableau ci-dessus.'
-                    : 'Affichez la carte pour localiser un dossier.'}
+                    ? 'Sélectionnez un marqueur sur la carte ou un dossier dans le tableau ci-dessus.'
+                    : 'Réactivez la carte pour localiser un dossier.'}
                 </p>
               </div>
             )}
@@ -669,7 +671,7 @@ export function DashboardPage() {
               pickMode={pickReport || pickEquipeLieu}
               pickBannerText={
                 pickEquipeLieu
-                  ? "Cliquer sur la carte : emplacement de rattachement de l’équipe"
+                  ? "Carte : indiquer le point de rattachement de l’équipe"
                   : undefined
               }
               onPickLatLng={(la, ln) => {
@@ -689,15 +691,15 @@ export function DashboardPage() {
               <div className="map-stats-overlay">
                 <div className="map-stats-row">
                   <span className="map-stat-dot" style={{ background: '#dc2626' }} />
-                  <span>{stats.attente} en attente</span>
+                  <span>{stats.attente} en attente de traitement</span>
                 </div>
                 <div className="map-stats-row">
                   <span className="map-stat-dot" style={{ background: '#3b82f6' }} />
-                  <span>{stats.enCours} en cours</span>
+                  <span>{stats.enCours} en intervention</span>
                 </div>
                 <div className="map-stats-row">
                   <span className="map-stat-dot" style={{ background: '#22c55e' }} />
-                  <span>{stats.termine} terminés</span>
+                  <span>{stats.termine} clôturés ou terminés</span>
                 </div>
               </div>
             ) : null}
@@ -718,7 +720,7 @@ export function DashboardPage() {
           onSuccess={async () => {
             setReportOpen(false);
             setPickReport(false);
-            setMsg('Signalement enregistré.');
+            setMsg('Constat enregistré.');
             await load();
           }}
           onError={setErr}
@@ -739,21 +741,21 @@ function SuggestionQgPanel({
   const code = suggestion.terrainClotureCode;
   const terrainDone =
     code === 'OFFICIAL_TICKET'
-      ? 'Traitement clos — signalement officiel issu de la patrouille'
+      ? 'Dossier converti — constat patrouille homologué'
       : code === 'NON_CONFORME'
-        ? 'Clôture terrain — dossier non conforme (ex. fraude signalée)'
+        ? 'Clôture terrain — non-conformité (ex. fraude)'
         : code === 'NON_REPERE'
-          ? 'Clôture terrain — lieu non retrouvé'
+          ? 'Clôture terrain — lieu non localisé'
           : code === 'AUTRE'
             ? 'Clôture terrain — autre motif'
             : code === 'FAUSSE_ALERTE'
-              ? 'Clôture terrain — fausse alerte (historique)'
+              ? 'Clôture terrain — fausse alerte'
               : null;
 
   return (
     <div className="suggestion-qg-panel">
       <div className="suggestion-qg-stripe" aria-hidden="true" />
-      <div className="qg-section-meta suggestion-qg-eyebrow">Suggestion citoyenne</div>
+      <div className="qg-section-meta suggestion-qg-eyebrow">Proposition citoyenne</div>
       <div className="suggestion-qg-head">
         <span className="badge" style={{ ['--chip-color' as string]: '#a855f7' }}>
           {typeLabel}
@@ -763,7 +765,7 @@ function SuggestionQgPanel({
             Traitée
           </span>
         ) : (
-          <span className="muted small suggestion-qg-pill">Instruction patrouille</span>
+          <span className="muted small suggestion-qg-pill">Attente patrouille</span>
         )}
       </div>
 
@@ -783,7 +785,7 @@ function SuggestionQgPanel({
 
       {terrainDone ? (
         <div className="suggestion-qg-order">
-          <strong>État</strong>
+          <strong>Statut terrain</strong>
           <p className="small muted">{terrainDone}</p>
           {suggestion.terrainClotureComment ? (
             <blockquote className="suggestion-qg-instruction">{suggestion.terrainClotureComment}</blockquote>
@@ -793,8 +795,8 @@ function SuggestionQgPanel({
 
       {role === 'ADMIN_QG' && !suggestion.traitee ? (
         <p className="muted small" style={{ marginTop: 10, lineHeight: 1.5 }}>
-          Pas d’affectation nominative depuis le QG : les patrouilles consultent leur liste d’attente, se déplacent
-          avec l’itinéraire intégré, puis ouvrent soit le signalement officiel soit une clôture motivée.
+          Les affectations nominatives relèvent du dispositif terrain : la patrouille consulte sa file
+          d’attente et saisit soit le constat officiel, soit une clôture motivée.
         </p>
       ) : null}
     </div>
@@ -867,7 +869,7 @@ function DetailPanel({
     onClearMsg();
     onError(null);
     if (!closureFile) {
-      onError('Une photographie de clôture doit être jointe.');
+      onError('Une photographie de clôture est obligatoire.');
       return;
     }
     try {
@@ -882,7 +884,7 @@ function DetailPanel({
 
   return (
     <div className="detail">
-      <h3>Ticket</h3>
+      <h3>Référence dossier</h3>
       <div className="muted small">{STATUT_LABELS[ticket.statut]}</div>
       {ticket.photoSignalement ? (
         <a href={ticket.photoSignalement} target="_blank" rel="noreferrer" className="thumb-link">
@@ -893,7 +895,7 @@ function DetailPanel({
 
       {role === 'ADMIN_QG' && ticket.statut === 'EN_ATTENTE_CONFIRMATION' ? (
         <div className="form">
-          <div className="muted small">Affectations</div>
+          <div className="muted small">Ressources affectées</div>
           {equipes.map((e) => (
             <label key={e.id} className="check-row">
               <input
@@ -919,7 +921,7 @@ function DetailPanel({
               Annuler
             </button>
             <button type="button" className="btn btn-primary" onClick={() => void adminConfirm()}>
-              Valider — réparation prévue
+              Valider et planifier la réparation
             </button>
           </div>
         </div>
@@ -931,7 +933,7 @@ function DetailPanel({
             Annuler
           </button>
           <button type="button" className="btn btn-primary" onClick={() => void adminCloture()}>
-              Clôturer (définitif)
+              Clôturer définitivement
           </button>
         </div>
       ) : null}
@@ -950,7 +952,7 @@ function DetailPanel({
       {role === 'EQUIPE_INTERVENTION' && assigned && ticket.statut === 'EN_REPARATION' ? (
         <div className="form">
           <label>
-              Clôture — joindre une photographie
+            Clôture — photographie justificative
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setClosureFile(e.target.files?.[0] || null)} />
           </label>
           <div className="row">
@@ -958,7 +960,7 @@ function DetailPanel({
               Annuler
             </button>
             <button type="button" className="btn btn-primary" onClick={() => void equipeFinish()}>
-              Terminer avec photo
+              Clôturer avec justificatif
             </button>
           </div>
         </div>
@@ -993,7 +995,7 @@ function ReportModal({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (lat === null || lng === null || !file) {
-      onError('Coordonnées géographiques et photographie obligatoires.');
+      onError('Coordonnées et photographie obligatoires.');
       return;
     }
     setLoading(true);
@@ -1018,12 +1020,12 @@ function ReportModal({
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <div className="modal" role="dialog" onMouseDown={(e) => e.stopPropagation()}>
-        <h2>Nouveau signalement</h2>
+        <h2>Constat patrouille</h2>
         <button type="button" className={pickReport ? 'btn btn-primary' : 'btn btn-ghost'} onClick={() => setPickReport(!pickReport)}>
-          {pickReport ? 'Sélection carte active' : 'Pointer sur la carte'}
+          {pickReport ? 'Saisie par carte active' : 'Localiser sur la carte'}
         </button>
         <p className="muted small">
-          {lat !== null && lng !== null ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'Aucune position'}
+          {lat !== null && lng !== null ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'Position non renseignée'}
         </p>
         <form onSubmit={submit} className="form">
           <label>
@@ -1056,7 +1058,7 @@ function ReportModal({
               Annuler
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Transmission…' : 'Enregistrer'}
+              {loading ? 'Envoi…' : 'Enregistrer'}
             </button>
           </div>
         </form>
@@ -1102,17 +1104,17 @@ function MobileOnlyScreen({
               <path d="M24 22l4 4 8-8" stroke="#007e3a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h1>Interface web indisponible pour ce profil</h1>
+          <h1>Application web non disponible pour ce profil</h1>
           <p className="muted small">
-            Comptes «&nbsp;agent de patrouille&nbsp;» et «&nbsp;équipe d’intervention&nbsp;» sont servis depuis
-            l&apos;application mobile Terrain. Ce portail reste destiné aux profils citoyen, administrateur QG et MTP.
+            Les comptes «&nbsp;agent de patrouille&nbsp;» et «&nbsp;équipe d’intervention&nbsp;» sont pris en charge
+            par l’application mobile Terrain. Ce portail est réservé aux profils citoyen, administrateur QG et MTP.
           </p>
           <div className="row" style={{ marginTop: '0.85rem' }}>
             <Link to="/" className="btn btn-ghost">
-              Annuler
+              Retour
             </Link>
             <button type="button" className="btn btn-primary" onClick={onLogout}>
-              Se déconnecter
+              Déconnexion
             </button>
           </div>
         </div>

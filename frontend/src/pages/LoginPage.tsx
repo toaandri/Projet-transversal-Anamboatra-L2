@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { OrgEmailLocalField, fullOrgEmail } from '../components/OrgEmailLocalField';
 import { useAuth } from '../useAuth';
 
 export function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState('');
+  const [emailLocal, setEmailLocal] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -15,10 +16,10 @@ export function LoginPage() {
     setErr(null);
     setLoading(true);
     try {
-      await login(email, password);
+      await login(fullOrgEmail(emailLocal), password);
       nav('/app', { replace: true });
     } catch (ex) {
-      setErr(ex instanceof Error ? ex.message : 'Connexion impossible');
+      setErr(ex instanceof Error ? ex.message : 'Échec de l’authentification.');
     } finally {
       setLoading(false);
     }
@@ -27,21 +28,21 @@ export function LoginPage() {
   return (
     <div className="page login-page">
       <div className="panel login-card">
-        <h1>Connexion Anamboatra</h1>
+        <h1>Authentification Anamboatra</h1>
         <p className="muted small">
-          Accès réservé aux comptes habilités QG et MTP — application poste (hors site grand public).
+          Portail opérationnel MTP et quartiers généraux — accès restreint, hors espace grand public.
         </p>
         <details className="login-details-muted">
-          <summary>Patrouilles et équipes d&apos;intervention</summary>
+          <summary>Agents terrain (patrouille et intervention)</summary>
           <p className="muted small">
-            Identifiants actifs depuis l&apos;application mobile Terrain (non disponible depuis ce poste).
+            Authentification via l&apos;application mobile Terrain ; ce poste ne prend pas en charge ces profils.
           </p>
         </details>
         {err ? <p className="alert error">{err}</p> : null}
         <form onSubmit={onSubmit} className="form">
           <label>
-            Adresse e-mail
-            <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            Courriel institutionnel
+            <OrgEmailLocalField required value={emailLocal} onChange={setEmailLocal} />
           </label>
           <label>
             Mot de passe

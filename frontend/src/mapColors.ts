@@ -23,17 +23,17 @@ export function suggestionMarkerStyle() {
 }
 
 export const STATUT_LABELS: Record<Statut, string> = {
-  EN_ATTENTE_CONFIRMATION: 'En attente de confirmation',
-  REPARATION_PREVUE: 'Réparation prévue',
-  EN_REPARATION: 'En réparation',
-  TERMINE: 'Terminé',
-  CLOTURE: 'Clôturé',
+  EN_ATTENTE_CONFIRMATION: 'En attente de validation QG',
+  REPARATION_PREVUE: 'Intervention planifiée',
+  EN_REPARATION: 'Intervention en cours',
+  TERMINE: 'Travaux terminés',
+  CLOTURE: 'Dossier clôturé',
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: 'Super-administrateur',
+  SUPER_ADMIN: 'Super-administrateur MTP',
   AGENT_PATROUILLE: 'Agent de patrouille',
-  ADMIN_QG: 'Administrateur QG',
+  ADMIN_QG: 'Administrateur de quartier général',
   EQUIPE_INTERVENTION: "Équipe d'intervention",
   CITOYEN: 'Citoyen',
 };

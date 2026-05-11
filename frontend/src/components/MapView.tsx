@@ -16,7 +16,7 @@ import type {
   GeoJsonPolygon,
   Role,
   Statut,
-  TypeInfrastructure,
+  TypeInfrastructureLegacy,
   Urgence,
   Zone,
 } from '../types';
@@ -30,16 +30,22 @@ const STATUT_COLORS: Record<Statut, string> = {
   CLOTURE: '#16a34a',
 };
 
-const TYPE_COLORS: Record<TypeInfrastructure, string> = {
+const TYPE_COLORS: Record<TypeInfrastructureLegacy, string> = {
   ROUTE: '#64748b',
-  ELECTRICITE: '#f59e0b',
-  EAU: '#0ea5e9',
+  ELECTRICITE_EAU: '#0e7490',
+  PROPRIETE_PUBLIQUE: '#7c3aed',
+  SALUBRITE: '#15803d',
+  ELECTRICITE: '#0e7490',
+  EAU: '#0e7490',
 };
 
-const TYPE_LABELS: Record<TypeInfrastructure, string> = {
+const TYPE_LABELS: Record<TypeInfrastructureLegacy, string> = {
   ROUTE: 'Route',
-  ELECTRICITE: 'Électricité',
-  EAU: 'Eau',
+  ELECTRICITE_EAU: 'Électricité / eau',
+  PROPRIETE_PUBLIQUE: 'Propriété publique',
+  SALUBRITE: 'Propreté (salubrité)',
+  ELECTRICITE: 'Électricité / eau',
+  EAU: 'Électricité / eau',
 };
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
@@ -69,6 +75,11 @@ type Props = {
    * avec le bouton Menu), pas de sélecteur Plan/Satellite — zoom au pincement / molette.
    */
   compactUI?: boolean;
+  /**
+   * Liste latérale / sélection externe : centre la carte sur ce point du GeoJSON source
+   * et ouvre l’infobulle. Incrémenter `nonce` à chaque clic pour le même index.
+   */
+  focusGeoIndex?: { index: number; nonce: number } | null;
 };
 
 type FeatureProps = {
@@ -76,8 +87,8 @@ type FeatureProps = {
   kind?: string;
   statut?: Statut;
   urgence?: Urgence;
-  typeInfrastructure?: TypeInfrastructure;
-  typeSuggere?: TypeInfrastructure;
+  typeInfrastructure?: TypeInfrastructureLegacy;
+  typeSuggere?: TypeInfrastructureLegacy;
   description?: string;
   photoSignalement?: string;
   dateSignalement?: string;
@@ -136,6 +147,34 @@ function MissingKey() {
   );
 }
 
+function FocusGeoIndexEffect({
+  focus,
+  rows,
+  onPickIndex,
+}: {
+  focus: { index: number; nonce: number } | null;
+  rows: { f: GeoJsonFeature; idx: number }[];
+  onPickIndex: (idx: number) => void;
+}) {
+  const map = useMap();
+  const lastNonceRef = useRef(0);
+
+  useEffect(() => {
+    if (!focus || !map) return;
+    if (focus.nonce === lastNonceRef.current) return;
+    const hit = rows.find((x) => x.idx === focus.index);
+    if (!hit) return;
+    lastNonceRef.current = focus.nonce;
+    const [lng, lat] = hit.f.geometry.coordinates as [number, number];
+    onPickIndex(focus.index);
+    map.panTo({ lat, lng });
+    const z = map.getZoom();
+    if (typeof z === 'number' && z < 14) map.setZoom(14);
+  }, [focus, map, rows, onPickIndex]);
+
+  return null;
+}
+
 export function MapView({
   geojson,
   viewerRole,
@@ -146,6 +185,7 @@ export function MapView({
   height = 'min(72vh, 640px)',
   myZone,
   compactUI = false,
+  focusGeoIndex = null,
 }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [basemap, setBasemap] = useState<MapBasemapId>('plan');
@@ -213,6 +253,7 @@ export function MapView({
           onClick={onMapClick}
           style={{ width: '100%', height: '100%' }}
         >
+          <FocusGeoIndexEffect focus={focusGeoIndex} rows={features} onPickIndex={setSelectedIdx} />
           {zonePaths ? (
             <>
               {/* Halo extérieur (style "spotlight" doux pour bien faire ressortir) */}
@@ -286,6 +327,7 @@ export function MapView({
               <FeaturePopup
                 feature={selected.f}
                 onClose={() => setSelectedIdx(null)}
+                showOpenDetailAction={!compactUI}
                 onOpenDetail={() => {
                   onSelectFeature?.(selected.f);
                   setSelectedIdx(null);
@@ -486,10 +528,13 @@ function FeaturePopup({
   feature,
   onClose,
   onOpenDetail,
+  showOpenDetailAction = true,
 }: {
   feature: GeoJsonFeature;
   onClose: () => void;
   onOpenDetail: () => void;
+  /** Carte citoyenne (compactUI) : pas de panneau détail — masquer l’action. */
+  showOpenDetailAction?: boolean;
 }) {
   const p = propsOf(feature);
   const [lng, lat] = feature.geometry.coordinates;
@@ -531,8 +576,8 @@ function FeaturePopup({
 
   const statut = (p.statut || 'EN_ATTENTE_CONFIRMATION') as Statut;
   const statutColor = STATUT_COLORS[statut];
-  const typeColor = p.typeInfrastructure ? TYPE_COLORS[p.typeInfrastructure] : '#64748b';
-  const typeLabel = p.typeInfrastructure ? TYPE_LABELS[p.typeInfrastructure] : 'Inconnu';
+  const typeColor = p.typeInfrastructure ? (TYPE_COLORS[p.typeInfrastructure] ?? '#64748b') : '#64748b';
+  const typeLabel = p.typeInfrastructure ? (TYPE_LABELS[p.typeInfrastructure] ?? 'Inconnu') : 'Inconnu';
   const photoApres =
     typeof p.photoCloture === 'string' && p.photoCloture.trim() ? p.photoCloture.trim() : '';
 
@@ -628,9 +673,11 @@ function FeaturePopup({
           </span>
           Anamboatra Maps
         </span>
-        <button type="button" className="anam-popup-action" onClick={onOpenDetail}>
-          Ouvrir le détail →
-        </button>
+        {showOpenDetailAction ? (
+          <button type="button" className="anam-popup-action" onClick={onOpenDetail}>
+            Ouvrir le détail →
+          </button>
+        ) : null}
       </div>
     </div>
   );

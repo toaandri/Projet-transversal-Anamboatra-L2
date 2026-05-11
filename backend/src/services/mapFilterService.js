@@ -1,14 +1,21 @@
 const { Op, literal } = require('sequelize');
 const { sequelize } = require('../config/postgres');
-const { Ticket, SuggestionCitoyen } = require('../models/postgres');
+const { Ticket, SuggestionCitoyen, Zone } = require('../models/postgres');
 const { RoleEnum, StatutEnum, MapRole } = require('../constants/enums');
+const { pointInPolygonLngLat, isValidCoordPair, toFiniteNumber } = require('../utils/geoPolygon');
 
-const statutsPublics = [
+const statutsPublics = Object.freeze([
   StatutEnum.REPARATION_PREVUE,
   StatutEnum.EN_REPARATION,
   StatutEnum.TERMINE,
   StatutEnum.CLOTURE,
-];
+]);
+/** Même ensemble que `statutsPublics` — accès O(1) si besoin de contrôles métier côté JS. */
+const statutsPublicsSet = Object.freeze(new Set(statutsPublics));
+
+const ROLES_WITH_ZONE_ONLY_TICKET_VISIBILITY = Object.freeze(
+  new Set([RoleEnum.AGENT_PATROUILLE, RoleEnum.ADMIN_QG]),
+);
 
 /**
  * Tickets « vitrine » : tous les dossiers publics approuvés, visible à l’échelle nationale.
@@ -16,7 +23,7 @@ const statutsPublics = [
 function publicTicketsNationalWhere() {
   return {
     visiblePublic: true,
-    statut: { [Op.in]: statutsPublics },
+    statut: { [Op.in]: Array.from(statutsPublicsSet) },
   };
 }
 
@@ -29,7 +36,7 @@ function publicTicketsInZoneWhere(mapScopeZoneId) {
   }
   return {
     visiblePublic: true,
-    statut: { [Op.in]: statutsPublics },
+    statut: { [Op.in]: Array.from(statutsPublicsSet) },
     zoneId: mapScopeZoneId,
   };
 }
@@ -46,19 +53,20 @@ function ticketVisibilityWhere(principal) {
 
   const { role, zoneId, userId } = principal;
 
-  if (role === RoleEnum.AGENT_PATROUILLE) {
-    return { zoneId };
-  }
-
-  if (role === RoleEnum.ADMIN_QG) {
+  if (ROLES_WITH_ZONE_ONLY_TICKET_VISIBILITY.has(role)) {
     return { zoneId };
   }
 
   if (role === RoleEnum.EQUIPE_INTERVENTION) {
+    if (!zoneId) {
+      return { id: { [Op.in]: [] } };
+    }
     const assignedLiteral = literal(
       `EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE("Ticket"."mission"->'assignedUserIds', '[]'::jsonb)) AS elem WHERE elem = ${sequelize.escape(userId)})`,
     );
-    return { [Op.or]: [assignedLiteral] };
+    return {
+      [Op.and]: [{ zoneId }, assignedLiteral],
+    };
   }
 
   return { id: { [Op.in]: [] } };
@@ -68,23 +76,23 @@ function suggestionsWhere(principal) {
   if (!principal || principal.type === MapRole.PUBLIC || principal.role === RoleEnum.CITOYEN) {
     return null;
   }
-  if (principal.role === RoleEnum.AGENT_PATROUILLE) {
+  if (ROLES_WITH_ZONE_ONLY_TICKET_VISIBILITY.has(principal.role)) {
     return { zoneId: principal.zoneId, traitee: false };
   }
-  if (principal.role === RoleEnum.ADMIN_QG) {
-    return {
-      zoneId: principal.zoneId,
-      traitee: false,
-    };
-  }
   if (principal.role === RoleEnum.EQUIPE_INTERVENTION) {
+    if (!principal.zoneId) return null;
     const uid = String(principal.userId);
     const needle = sequelize.escape(JSON.stringify([uid]));
-    return literal(`EXISTS (
-      SELECT 1 FROM tickets AS t
-      WHERE t.zone_id = "SuggestionCitoyen"."zone_id"
-      AND COALESCE(t.mission->'assignedUserIds', '[]'::jsonb) @> ${needle}::jsonb
-    )`);
+    return {
+      [Op.and]: [
+        { zoneId: principal.zoneId, traitee: false },
+        literal(`EXISTS (
+          SELECT 1 FROM tickets AS t
+          WHERE t.zone_id = "SuggestionCitoyen"."zone_id"
+          AND COALESCE(t.mission->'assignedUserIds', '[]'::jsonb) @> ${needle}::jsonb
+        )`),
+      ],
+    };
   }
   return null;
 }
@@ -98,20 +106,77 @@ function layersMeta(principal) {
   return base;
 }
 
+/**
+ * Pour QG / patrouille / équipe d’intervention : après filtre zoneId, on restreint aux points
+ * dont les coordonnées tombent dans le polygone officiel de la zone (évite d’afficher un
+ * dossier mal rattaché).
+ */
+async function zoneGeometryFilterFn(principal) {
+  if (!principal || principal.type === MapRole.PUBLIC) return null;
+  if (
+    principal.role !== RoleEnum.ADMIN_QG &&
+    principal.role !== RoleEnum.AGENT_PATROUILLE &&
+    principal.role !== RoleEnum.EQUIPE_INTERVENTION
+  ) {
+    return null;
+  }
+  if (!principal.zoneId) return null;
+  const zone = await Zone.findByPk(principal.zoneId, { attributes: ['geometrie'] });
+  if (!zone || !zone.geometrie) return null;
+  const g = zone.geometrie;
+  if (g.type !== 'Polygon' && g.type !== 'MultiPolygon') return null;
+  return (lng, lat) => {
+    const ln = toFiniteNumber(lng);
+    const lt = toFiniteNumber(lat);
+    if (!isValidCoordPair(ln, lt)) return false;
+    return pointInPolygonLngLat(ln, lt, g);
+  };
+}
+
+async function filterTicketsByZoneGeometry(principal, ticketList) {
+  const fn = await zoneGeometryFilterFn(principal);
+  if (!fn) return ticketList;
+  return ticketList.filter((t) => {
+    const loc = t.localisation || {};
+    return fn(loc.longitude, loc.latitude);
+  });
+}
+
+async function filterSuggestionsByZoneGeometry(principal, suggestionList) {
+  const fn = await zoneGeometryFilterFn(principal);
+  if (!fn) return suggestionList;
+  return suggestionList.filter((s) => {
+    const loc = s.localisation || {};
+    return fn(loc.longitude, loc.latitude);
+  });
+}
+
 async function buildMapPayload(principal) {
   const ticketWhere = ticketVisibilityWhere(principal);
-  const tickets = await Ticket.findAll({
+  let tickets = await Ticket.findAll({
     where: ticketWhere,
     order: [['updatedAt', 'DESC']],
   });
 
   const sugWhere = suggestionsWhere(principal);
-  const suggestions = sugWhere
+  let suggestions = sugWhere
     ? await SuggestionCitoyen.findAll({
         where: sugWhere,
         order: [['createdAt', 'DESC']],
       })
     : [];
+
+  const geoFn = await zoneGeometryFilterFn(principal);
+  if (geoFn) {
+    tickets = tickets.filter((t) => {
+      const loc = t.localisation || {};
+      return geoFn(loc.longitude, loc.latitude);
+    });
+    suggestions = suggestions.filter((s) => {
+      const loc = s.localisation || {};
+      return geoFn(loc.longitude, loc.latitude);
+    });
+  }
 
   const ticketFeatures = tickets.map((t) => {
     const loc = t.localisation || {};
@@ -152,6 +217,7 @@ async function buildMapPayload(principal) {
         dateSoumission: s.dateSoumission,
         assignedPatrolUserId: s.assignedPatrolUserId ? String(s.assignedPatrolUserId) : null,
         dispatched: Boolean(s.assignedPatrolUserId && s.dispatchedAt),
+        photoCitoyen: s.photoCitoyen || null,
       },
     };
   });
@@ -171,4 +237,6 @@ module.exports = {
   suggestionsWhere,
   publicTicketsInZoneWhere,
   publicTicketsNationalWhere,
+  filterTicketsByZoneGeometry,
+  filterSuggestionsByZoneGeometry,
 };

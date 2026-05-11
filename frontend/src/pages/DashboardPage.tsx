@@ -13,6 +13,7 @@ import type {
   SuggestionCitoyen,
   Ticket,
   TypeInfrastructure,
+  TypeInfrastructureLegacy,
   Urgence,
   Zone,
 } from '../types';
@@ -28,9 +29,14 @@ const STATUTS_ORDER: Statut[] = [
 
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
   { v: 'ROUTE', l: 'Route', color: '#64748b' },
-  { v: 'ELECTRICITE', l: 'Électricité', color: '#f59e0b' },
-  { v: 'EAU', l: 'Eau', color: '#0ea5e9' },
+  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: '#0e7490' },
+  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: '#7c3aed' },
+  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: '#15803d' },
 ];
+
+const TYPE_META_BY_INFRASTRUCTURE = new Map<TypeInfrastructure, (typeof TYPES)[number]>(
+  TYPES.map((t) => [t.v, t]),
+);
 
 const STATUT_COLORS: Record<Statut, string> = {
   EN_ATTENTE_CONFIRMATION: '#dc2626',
@@ -45,21 +51,54 @@ const URGENCE_COLORS: Record<Urgence, string> = {
   URGENT: '#dc2626',
 };
 
-function filterGeo(features: GeoJsonFeature[], f: Filters): GeoJsonFeature[] {
-  return features.filter((x) => {
-    const p = x.properties as { kind?: string; statut?: Statut; urgence?: Urgence; typeInfrastructure?: TypeInfrastructure; typeSuggere?: TypeInfrastructure };
-    if (p.kind === 'suggestion') {
-      if (f.types.length && !f.types.includes(p.typeSuggere as TypeInfrastructure)) return false;
-      return true;
-    }
-    if (f.statuts.length && p.statut && !f.statuts.includes(p.statut)) return false;
-    if (f.urgences.length && p.urgence && !f.urgences.includes(p.urgence)) return false;
-    if (f.types.length && p.typeInfrastructure && !f.types.includes(p.typeInfrastructure)) return false;
-    return true;
-  });
+function canonicalInfrastructureType(v: string | undefined): TypeInfrastructure | undefined {
+  if (!v) return undefined;
+  if (v === 'ELECTRICITE' || v === 'EAU') return 'ELECTRICITE_EAU';
+  if (v === 'ROUTE' || v === 'ELECTRICITE_EAU' || v === 'PROPRIETE_PUBLIQUE' || v === 'SALUBRITE') return v;
+  return undefined;
+}
+
+function typeMetaForInfrastructureField(
+  raw: string | undefined,
+): (typeof TYPES)[number] | undefined {
+  const key =
+    canonicalInfrastructureType(raw) ??
+    (raw && TYPE_META_BY_INFRASTRUCTURE.has(raw as TypeInfrastructure) ? (raw as TypeInfrastructure) : undefined);
+  if (!key) return undefined;
+  return TYPE_META_BY_INFRASTRUCTURE.get(key);
 }
 
 type Filters = { statuts: Statut[]; urgences: Urgence[]; types: TypeInfrastructure[] };
+
+function filterGeo(features: GeoJsonFeature[], f: Filters): GeoJsonFeature[] {
+  const statutsWant = f.statuts.length ? new Set(f.statuts) : null;
+  const urgencesWant = f.urgences.length ? new Set(f.urgences) : null;
+  const typesWant = f.types.length ? new Set(f.types) : null;
+
+  return features.filter((x) => {
+    const p = x.properties as {
+      kind?: string;
+      statut?: Statut;
+      urgence?: Urgence;
+      typeInfrastructure?: TypeInfrastructureLegacy;
+      typeSuggere?: TypeInfrastructureLegacy;
+    };
+    if (p.kind === 'suggestion') {
+      if (typesWant && typesWant.size > 0 && p.typeSuggere) {
+        const t = canonicalInfrastructureType(p.typeSuggere);
+        if (!t || !typesWant.has(t)) return false;
+      }
+      return true;
+    }
+    if (statutsWant && p.statut && !statutsWant.has(p.statut)) return false;
+    if (urgencesWant && p.urgence && !urgencesWant.has(p.urgence)) return false;
+    if (typesWant && typesWant.size > 0 && p.typeInfrastructure) {
+      const t = canonicalInfrastructureType(p.typeInfrastructure);
+      if (!t || !typesWant.has(t)) return false;
+    }
+    return true;
+  });
+}
 
 type QgMenuPage = 'signalements' | 'patrouille' | 'intervention';
 
@@ -177,15 +216,17 @@ export function DashboardPage() {
   );
 
   const filteredTickets = useMemo(() => {
+    const statutsWant = filters.statuts.length ? new Set(filters.statuts) : null;
+    const urgencesWant = filters.urgences.length ? new Set(filters.urgences) : null;
+    const typesWant = filters.types.length ? new Set(filters.types) : null;
+
     return tickets.filter((t) => {
-      if (filters.statuts.length && !filters.statuts.includes(t.statut)) return false;
-      if (filters.urgences.length && !filters.urgences.includes(t.urgence))
-        return false;
-      if (
-        filters.types.length &&
-        !filters.types.includes(t.typeInfrastructure)
-      )
-        return false;
+      if (statutsWant && !statutsWant.has(t.statut)) return false;
+      if (urgencesWant && !urgencesWant.has(t.urgence)) return false;
+      if (typesWant && typesWant.size > 0) {
+        const ct = canonicalInfrastructureType(t.typeInfrastructure);
+        if (!ct || !typesWant.has(ct)) return false;
+      }
       return true;
     });
   }, [tickets, filters]);
@@ -579,9 +620,12 @@ export function DashboardPage() {
                             <span className="ticket-card-row">
                               <span
                                 className="badge"
-                                style={{ ['--chip-color' as string]: TYPES.find((x) => x.v === t.typeInfrastructure)?.color || '#64748b' }}
+                                style={{
+                                  ['--chip-color' as string]:
+                                    typeMetaForInfrastructureField(t.typeInfrastructure)?.color || '#64748b',
+                                }}
                               >
-                                {t.typeInfrastructure}
+                                {typeMetaForInfrastructureField(t.typeInfrastructure)?.l ?? t.typeInfrastructure}
                               </span>
                               {t.urgence === 'URGENT' ? (
                                 <span className="badge badge-urgent">URGENT</span>
@@ -737,7 +781,8 @@ function SuggestionQgPanel({
   suggestion: SuggestionCitoyen;
   role: Role | null;
 }) {
-  const typeLabel = TYPES.find((t) => t.v === suggestion.typeSuggere)?.l ?? suggestion.typeSuggere;
+  const typeLabel =
+    typeMetaForInfrastructureField(suggestion.typeSuggere)?.l ?? suggestion.typeSuggere;
   const code = suggestion.terrainClotureCode;
   const terrainDone =
     code === 'OFFICIAL_TICKET'
@@ -768,6 +813,18 @@ function SuggestionQgPanel({
           <span className="muted small suggestion-qg-pill">Attente patrouille</span>
         )}
       </div>
+
+      {suggestion.photoCitoyen ? (
+        <a
+          href={suggestion.photoCitoyen}
+          target="_blank"
+          rel="noreferrer"
+          className="thumb-link"
+          style={{ marginBottom: 12, display: 'block' }}
+        >
+          <img src={suggestion.photoCitoyen} alt="Illustration citoyenne" className="thumb" />
+        </a>
+      ) : null}
 
       <p className="small suggestion-qg-desc">{suggestion.description}</p>
       <dl className="suggestion-qg-meta">

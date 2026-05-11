@@ -25,7 +25,7 @@ import { OsrmRouteModal } from '../../src/OsrmRouteModal';
 import { colors, TYPE_COLORS, TYPE_LABELS } from '../../src/theme';
 import type { SuggestionCitoyen, TerrainClotureCodePatrouille, TypeInfrastructure, Urgence } from '../../src/types';
 
-const TYPES: TypeInfrastructure[] = ['ROUTE', 'ELECTRICITE', 'EAU'];
+const TYPES: TypeInfrastructure[] = ['ROUTE', 'ELECTRICITE_EAU', 'PROPRIETE_PUBLIQUE', 'SALUBRITE'];
 
 const CLOTURE_OPTIONS: { code: TerrainClotureCodePatrouille; label: string; hint: string }[] = [
   {

@@ -4,10 +4,16 @@ const { body, param, validationResult } = require('express-validator');
 const { Ticket, SuggestionCitoyen } = require('../models/postgres');
 const { authenticate } = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/requireRole');
-const { RoleEnum, UrgenceEnum, TypeEnum, StatutEnum, TerrainClotureCodeEnum } = require('../constants/enums');
+const {
+  RoleEnum,
+  TypeEnumValueSet,
+  UrgenceEnumValueSet,
+  StatutEnum,
+  TerrainClotureCodeEnum,
+} = require('../constants/enums');
 const { uploadPhoto, publicUrlForStoredFile } = require('../utils/photoUpload');
 const { assertPhotoLocationConsistent } = require('../utils/exifVerify');
-const { ticketVisibilityWhere } = require('../services/mapFilterService');
+const { ticketVisibilityWhere, filterTicketsByZoneGeometry } = require('../services/mapFilterService');
 const { applyTicketPatch } = require('../services/ticketLifecycle');
 
 const router = express.Router();
@@ -22,10 +28,11 @@ router.get('/', async (req, res) => {
   };
   try {
     const filter = ticketVisibilityWhere(principal);
-    const tickets = await Ticket.findAll({
+    let tickets = await Ticket.findAll({
       where: filter,
       order: [['updatedAt', 'DESC']],
     });
+    tickets = await filterTicketsByZoneGeometry(principal, tickets);
     return res.json({ tickets });
   } catch (e) {
     console.error('[GET /tickets]', e);
@@ -53,6 +60,11 @@ router.get('/:id', param('id').isUUID(), async (req, res) => {
   });
   if (!allowed) return res.status(403).json({ message: 'Accès refusé à ce ticket' });
 
+  const geoScoped = await filterTicketsByZoneGeometry(principal, [ticket]);
+  if (geoScoped.length === 0) {
+    return res.status(403).json({ message: 'Ce signalement est hors du périmètre cartographique de votre zone.' });
+  }
+
   return res.json({ ticket });
 });
 
@@ -61,8 +73,12 @@ router.post(
   requireRole(RoleEnum.AGENT_PATROUILLE),
   uploadPhoto.single('photo'),
   body('description').isString().isLength({ min: 3, max: 4000 }),
-  body('urgence').isIn(Object.values(UrgenceEnum)),
-  body('typeInfrastructure').isIn(Object.values(TypeEnum)),
+  body('urgence')
+    .custom((value) => UrgenceEnumValueSet.has(value))
+    .withMessage('Urgence invalide'),
+  body('typeInfrastructure')
+    .custom((value) => TypeEnumValueSet.has(value))
+    .withMessage("Type d'infrastructure invalide"),
   body('latitude').isFloat({ min: -90, max: 90 }),
   body('longitude').isFloat({ min: -180, max: 180 }),
   body('originSuggestionId').optional().isUUID(),

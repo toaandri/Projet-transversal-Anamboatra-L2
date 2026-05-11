@@ -27,15 +27,21 @@ const MAP_PINS = [
 ];
 
 const SCREENS = [
-  { id: 'manifesto', label: 'Présentation du dispositif', navLabel: 'Présentation' },
-  { id: 'carte', label: 'Référentiel cartographique', navLabel: 'Carte' },
-  { id: 'roles', label: 'Acteurs et périmètres', navLabel: 'Acteurs' },
-  { id: 'agir', label: 'Consultation et signalement officiel', navLabel: 'Accès' },
+  { id: 'manifesto', label: 'Ouverture — territoire numérique', navLabel: 'Entrée' },
+  { id: 'carte', label: 'Référentiel cartographique national', navLabel: 'Carte' },
+  { id: 'roles', label: 'Chaîne de responsabilité', navLabel: 'Rôles' },
+  { id: 'agir', label: 'Passerelle publique officielle', navLabel: 'Accès' },
 ] as const;
 
 type ScreenId = (typeof SCREENS)[number]['id'];
 
 const SCREEN_ORDER: ScreenId[] = SCREENS.map((s) => s.id);
+
+const SCREEN_INDEX_BY_ID: ReadonlyMap<ScreenId, number> = new Map(
+  SCREEN_ORDER.map((id, idx) => [id, idx]),
+);
+
+const KNOWN_SCREEN_IDS: ReadonlySet<ScreenId> = new Set(SCREEN_ORDER);
 
 function usePrefersReducedMotion(): boolean {
   const [pref, setPref] = useState(false);
@@ -93,6 +99,9 @@ function useStoryScreen(scrollerRef: React.RefObject<HTMLElement | null>) {
         }
       }
       if (best) {
+        if (!KNOWN_SCREEN_IDS.has(best)) best = null;
+      }
+      if (best) {
         sections.forEach((el) => {
           el.classList.toggle('is-active', el.dataset.screen === best);
         });
@@ -123,7 +132,7 @@ function useStoryScreen(scrollerRef: React.RefObject<HTMLElement | null>) {
       if (t?.closest('[contenteditable="true"]')) return;
       if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
 
-      const i = SCREEN_ORDER.indexOf(active);
+      const i = SCREEN_INDEX_BY_ID.get(active) ?? -1;
       if (e.key === 'ArrowDown' || e.key === 'PageDown') {
         if (i < SCREEN_ORDER.length - 1) {
           e.preventDefault();
@@ -212,7 +221,7 @@ function StoryMadagascarMapCard({ reducedMotion }: { reducedMotion: boolean }) {
         <div className="story-mapcard-scan" />
         <div className="story-mapcard-badge">
           <span className="story-mapcard-live" aria-hidden />
-          Référentiel MTP · mise à jour des statuts selon circuits habilités
+          Flux institutionnel · statuts alignés sur les circuits MTP
         </div>
         <svg
           className="story-mapcard-svg"
@@ -221,14 +230,14 @@ function StoryMadagascarMapCard({ reducedMotion }: { reducedMotion: boolean }) {
         >
           <defs>
             <linearGradient id="storyMadaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(0, 126, 58, 0.45)" />
-              <stop offset="100%" stopColor="rgba(11, 61, 145, 0.32)" />
+              <stop offset="0%" stopColor="rgba(34, 211, 238, 0.35)" />
+              <stop offset="100%" stopColor="rgba(99, 102, 241, 0.38)" />
             </linearGradient>
           </defs>
           <path
             d={MADAGASCAR_PATH}
             fill="url(#storyMadaGrad)"
-            stroke="#0b3d91"
+            stroke="#38bdf8"
             strokeWidth="0.8"
             strokeLinejoin="round"
           />
@@ -257,7 +266,7 @@ export function PublicLanding() {
   const heroVideoRef = useRef<HTMLVideoElement>(null);
   const [heroStreamFallback, setHeroStreamFallback] = useState(false);
 
-  const stepIndex = SCREEN_ORDER.indexOf(active);
+  const stepIndex = SCREEN_INDEX_BY_ID.get(active) ?? -1;
   const liveLabel =
     stepIndex >= 0
       ? `Écran ${stepIndex + 1} sur ${SCREENS.length} · ${SCREENS[stepIndex]!.label}`
@@ -360,21 +369,21 @@ export function PublicLanding() {
         <section className="story-screen story-screen--manifesto" data-screen="manifesto">
           <div className="story-screen-content story-manifesto">
             <p className="story-manifesto-intro" data-anim="fade-up" data-delay="50">
-              <span lang="mg">Ministere du travaux public · Anamboatra </span>
+              <span lang="fr">Ministère des Travaux publics · Anamboatra</span>
               <br />
               <span className="story-manifesto-subfr" lang="fr">
-                Projet Transversal L2 SIO Maharavo
+                Projet transversal L2 SIO — Maharavo
               </span>
             </p>
             <h1 className="story-h1" data-anim="fade-up" data-delay="100">
-              <span className="story-h1-line">Signalement, instruction et mise à jour des statuts</span>
+              <span className="story-h1-line">Ils nous disent Anamboatra.</span>
               <span className="story-h1-line story-h1-grad story-gradient-flow">
-                Une cartographie nationale tenue sous responsabilité du MTP
+                Signalement, instruction, statuts — une carte, une vérité MTP
               </span>
             </h1>
             <div className="story-cta-row" data-anim="fade-up" data-delay="400">
               <Link to="/travaux" className="story-cta-primary">
-                Consultation cartographique
+                Entrer dans la carte
                 <span className="story-cta-arrow">→</span>
               </Link>
             </div>
@@ -386,7 +395,7 @@ export function PublicLanding() {
               data-anim="fade-up"
               data-delay="600"
             >
-              Section suivante
+              Suite
               <span className="story-scroll-cue" aria-hidden="true">
                 <span />
               </span>
@@ -403,25 +412,25 @@ export function PublicLanding() {
           <div className="story-screen-content story-carte">
             <div className="story-carte-text story-panel story-panel--carte">
               <h2 className="story-h2" data-anim="fade-up" data-delay="120">
-                Une vue nationale des territoires et des axes suivis&nbsp;<br />
-                <span className="story-h2-grad">Instruction et publication selon périmètres MTP</span>
+                Le territoire, calé sur le référentiel.&nbsp;<br />
+                <span className="story-h2-grad">Une seule couche d’information officielle</span>
               </h2>
               <p className="story-lede story-lede--compact" data-anim="fade-up" data-delay="240">
-                Les géométries et statuts figurant sur cette carte résultent de saisies et validations effectuées
-                par les acteurs désignés. La consultation reproduit ces données institutionnelles, pas des sources tiers.
+                Géométries et statuts = saisies validées par les acteurs mandatés. Ce que vous voyez est la chaîne MTP,
+                pas une agrégation de sources externes.
               </p>
               <ul className="story-stats" data-anim="fade-up" data-delay="360">
                 <li>
-                  <strong>Réseau</strong>
-                  <span>diffusion des mises à jour de statut entre postes MTP, QG et applications terrain autorisées</span>
+                  <strong>Synchro</strong>
+                  <span>statuts diffusés entre QG, patrouilles et outils terrain habilités</span>
                 </li>
                 <li>
-                  <strong>Géolocalisation</strong>
-                  <span>chaque dossier actif rattache coordonnées et zone administrative</span>
+                  <strong>Ancrage</strong>
+                  <span>chaque dossier porte coordonnées et rattachement administratif</span>
                 </li>
                 <li>
-                  <strong>Habilitation</strong>
-                  <span>référentiel conservé hors procédés parallèles sans mandat MTP</span>
+                  <strong>Garde-fou</strong>
+                  <span>pas de « carte parallèle » sans mandat ministériel</span>
                 </li>
               </ul>
             </div>
@@ -442,43 +451,39 @@ export function PublicLanding() {
             <div className="story-roles-intro story-panel story-panel--roles">
               <header className="story-roles-head">
                 <h2 className="story-h2 story-h2--center" data-anim="fade-up" data-delay="120">
-                  Répartition fonctionnelle des statuts&nbsp;<br />
-                  <span className="story-h2-grad">du signalement jusqu’à la clôture</span>
+                  Quatre tempéraments, un même fil.&nbsp;<br />
+                  <span className="story-h2-grad">Du signalement à la clôture ministérielle</span>
                 </h2>
               </header>
             </div>
             <div className="story-roles-grid">
               <article className="story-role role-citoyen" data-anim="slide-up" data-delay="100">
                 <span className="story-role-num">01</span>
-                <h3>Grand public · consultation</h3>
+                <h3>Citoyen · lecture</h3>
                 <p>
-                  Consultation conforme aux éléments mis à disposition par le MTP. Une observation peut être transmise
-                  depuis la carte publique ; après saisie, le dossier est instruit uniquement dans les circuits
-                  patrouille et QG. Aucune opération carte ne se substitue à une décision publiée officiellement.
+                  Vue calée sur ce que le MTP publie. Signalement possible : ensuite, seuls patrouille et QG instruisent.
+                  La carte n’écrit pas la décision — elle la reflète.
                 </p>
               </article>
               <article className="story-role role-agent" data-anim="slide-up" data-delay="220">
                 <span className="story-role-num">02</span>
-                <h3>Patrouille · terrain</h3>
+                <h3>Patrouille · qualification</h3>
                 <p>
-                  Qualification géolocalisée des dossiers du périmètre assigné&nbsp;: comptes rendus, pièces photo
-                  horodatées et synchronisation sur le référentiel partagé avec le QG.
+                  Terrain géolocalisé, preuves horodatées, synchro temps réel vers le même référentiel que le QG.
                 </p>
               </article>
               <article className="story-role role-equipe" data-anim="slide-up" data-delay="340">
                 <span className="story-role-num">03</span>
                 <h3>Intervention · exécution</h3>
                 <p>
-                  Exécution des missions planifiées, documentation des chantiers terminés ou reportés ; les statuts
-                  affichés reflètent l’état courant communiqué par l’unité désignée.
+                  Chantiers, reports, clôtures : chaque mouvement alimente le statut visible collectivement.
                 </p>
               </article>
               <article className="story-role role-qg" data-anim="slide-up" data-delay="460">
                 <span className="story-role-num">04</span>
-                <h3>QG · pilotage ministériel</h3>
+                <h3>QG · arbitrage</h3>
                 <p>
-                  Pilotage territorial&nbsp;: rattachements, mesures agrégées et coordination avec les cellules MTP
-                  pour faire circuler décisions statutaires jusqu’aux acteurs mobiles.
+                  Pilotage, agrégats, rattachements : les décisions statutaires descendent jusqu’au mobile.
                 </p>
               </article>
             </div>
@@ -494,23 +499,24 @@ export function PublicLanding() {
           </div>
           <div className="story-screen-content story-agir">
             <h2 className="story-h2 story-h2--center story-h2--light" data-anim="fade-up" data-delay="120">
-              Consultation et signalement officiels
+              La porte est ouverte.
             </h2>
             <p className="story-lede story-lede--center story-lede--light" data-anim="fade-up" data-delay="240">
-              Visitez la carte anamboatra, ou vous pouvez voir toute la carte de Madagascar avec toutes les reparations prevues en toute transparence
+              Parcourez Madagascar au même niveau d’information que les interfaces publiques Anamboatra : travaux suivis,
+              statuts lisibles, transparence native.
             </p>
             <div className="story-cta-row story-cta-row--center" data-anim="fade-up" data-delay="360">
               <Link to="/travaux" className="story-cta-primary story-cta-primary--xl">
-                Ouvrir la carte publique officielle
+                Lancer la carte publique
                 <span className="story-cta-arrow">→</span>
               </Link>
             </div>
             <footer className="story-foot" data-anim="fade-up" data-delay="500">
               <span>
-                <strong>Projet Transversal</strong> - By Maharavo     
+                <strong>Anamboatra Maps</strong> — Maharavo
               </span>
-              <span>Anamboatra</span>
-              <span>© 2026 — Repoblikan'i Madagasikara</span>
+              <span>SGRI-2035</span>
+              <span>© 2026 — Repoblikan’i Madagasikara</span>
             </footer>
           </div>
         </section>

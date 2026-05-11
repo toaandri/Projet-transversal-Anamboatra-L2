@@ -25,7 +25,7 @@ const { hashPassword } = require('../utils/password');
 const {
   RoleEnum,
   TypeZoneEnum,
-  SpecialiteEnum,
+  SpecialiteEnumValueSet,
 } = require('../constants/enums');
 
 const router = express.Router();
@@ -216,6 +216,58 @@ router.post(
   },
 );
 
+router.patch(
+  '/qg-admins/:id',
+  param('id').isUUID(),
+  body('nom').optional().isString().trim().isLength({ min: 2, max: 120 }),
+  body('prenom').optional().isString().trim().isLength({ min: 2, max: 120 }),
+  body('email').optional().isEmail(),
+  body('password').optional().isString().isLength({ min: 8, max: 200 }),
+  body('numeroTelephone').optional().isString().trim().isLength({ min: 4, max: 32 }),
+  body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
+  body('zoneId').optional().isUUID(),
+  body('actif').optional().isBoolean(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const admin = await User.findOne({
+      where: { id: req.params.id, role: RoleEnum.ADMIN_QG },
+    });
+    if (!admin) return res.status(404).json({ message: 'Administrateur QG introuvable' });
+
+    if (req.body.zoneId !== undefined && req.body.zoneId !== admin.zoneId) {
+      const zone = await Zone.findByPk(req.body.zoneId);
+      if (!zone) return res.status(404).json({ message: 'Zone introuvable' });
+      if (zone.type === TypeZoneEnum.DEPOT_REPARATION) {
+        return res.status(400).json({
+          message: 'Un Admin QG ne peut pas être rattaché à un dépôt de réparation.',
+        });
+      }
+    }
+
+    if (req.body.email && req.body.email !== admin.email) {
+      const dup = await User.findOne({ where: { email: req.body.email } });
+      if (dup) return res.status(409).json({ message: 'Cet email est déjà utilisé' });
+    }
+
+    const updates = {};
+    if (req.body.nom !== undefined) updates.nom = req.body.nom;
+    if (req.body.prenom !== undefined) updates.prenom = req.body.prenom;
+    if (req.body.email !== undefined) updates.email = req.body.email;
+    if (req.body.numeroTelephone !== undefined) updates.numeroTelephone = req.body.numeroTelephone;
+    if (req.body.matricule !== undefined) updates.matricule = req.body.matricule;
+    if (req.body.zoneId !== undefined) updates.zoneId = req.body.zoneId;
+    if (req.body.actif !== undefined) updates.actif = req.body.actif;
+    if (req.body.password) {
+      updates.motDePasseHash = await hashPassword(req.body.password);
+    }
+
+    await admin.update(updates);
+    return res.json({ admin: serializeUser(admin) });
+  },
+);
+
 /* ---------------------- Agents de réparation ---------------------- */
 /* (EQUIPE_INTERVENTION rattaché à un DEPOT_REPARATION, avec spécialité) */
 router.use('/agents', (_req, res) => {
@@ -249,7 +301,7 @@ router.post(
   body('numeroTelephone').isString().trim().isLength({ min: 4, max: 32 }),
   body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
   body('specialite')
-    .isIn(Object.values(SpecialiteEnum))
+    .custom((value) => SpecialiteEnumValueSet.has(value))
     .withMessage('specialite doit être une valeur SpecialiteEnum connue'),
   async (req, res) => {
     const errors = validationResult(req);
@@ -291,7 +343,9 @@ router.patch(
   body('prenom').optional().isString().trim().isLength({ min: 2, max: 120 }),
   body('numeroTelephone').optional().isString().trim().isLength({ min: 4, max: 32 }),
   body('matricule').optional({ nullable: true }).isString().isLength({ max: 64 }),
-  body('specialite').optional().isIn(Object.values(SpecialiteEnum)),
+  body('specialite')
+    .optional()
+    .custom((value) => value == null || SpecialiteEnumValueSet.has(value)),
   body('zoneId').optional({ nullable: false }).isUUID(),
   async (req, res) => {
     const errors = validationResult(req);

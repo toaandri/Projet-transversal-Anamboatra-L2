@@ -1,9 +1,10 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
 const { Ticket, SuggestionCitoyen, Zone } = require('../models/postgres');
 const { buildMapPayload, publicTicketsInZoneWhere, publicTicketsNationalWhere } = require('../services/mapFilterService');
-const { MapRole, TypeEnum } = require('../constants/enums');
+const { MapRole, TypeEnumValueSet } = require('../constants/enums');
 const { mapScopeZoneIdFromQuery } = require('../utils/mapScopeZone');
+const { uploadPhoto, publicUrlForStoredFile } = require('../utils/photoUpload');
+const { findArrondissementZoneForCoordinates } = require('../utils/zoneResolve');
 
 const router = express.Router();
 
@@ -31,43 +32,75 @@ router.get('/map/tiles', async (_req, res) => {
   return res.json(payload);
 });
 
-router.post(
-  '/suggestions',
-  body('description').isString().isLength({ min: 3, max: 2000 }),
-  body('typeSuggere').isIn(Object.values(TypeEnum)),
-  body('latitude').isFloat({ min: -90, max: 90 }),
-  body('longitude').isFloat({ min: -180, max: 180 }),
-  body('zoneId').isUUID(),
-  body('pseudoCitoyen').optional().isString().isLength({ max: 120 }),
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+router.post('/suggestions', (req, res, next) => {
+  uploadPhoto.single('photo')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message || 'Fichier image invalide' });
+    next();
+  });
+}, async (req, res) => {
+  const description = typeof req.body.description === 'string' ? req.body.description.trim() : '';
+  if (description.length < 3 || description.length > 2000) {
+    return res.status(400).json({ message: 'Description : entre 3 et 2000 caractères.' });
+  }
 
-    const zone = await Zone.findByPk(req.body.zoneId);
-    if (!zone) return res.status(400).json({ message: 'Zone invalide' });
+  const typeSuggere = req.body.typeSuggere;
+  if (!TypeEnumValueSet.has(typeSuggere)) {
+    return res.status(400).json({ message: "Type d'infrastructure invalide." });
+  }
 
-    const doc = await SuggestionCitoyen.create({
-      description: req.body.description,
-      typeSuggere: req.body.typeSuggere,
-      pseudoCitoyen: req.body.pseudoCitoyen,
-      zoneId: zone.id,
-      localisation: {
-        latitude: req.body.latitude,
-        longitude: req.body.longitude,
-      },
-      dateSoumission: new Date(),
+  const lat = Number(req.body.latitude);
+  const lng = Number(req.body.longitude);
+  if (
+    !Number.isFinite(lat) ||
+    lat < -90 ||
+    lat > 90 ||
+    !Number.isFinite(lng) ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return res.status(400).json({ message: 'Coordonnées géographiques invalides.' });
+  }
+
+  let pseudoCitoyen = null;
+  if (typeof req.body.pseudoCitoyen === 'string' && req.body.pseudoCitoyen.trim()) {
+    pseudoCitoyen = req.body.pseudoCitoyen.trim().slice(0, 120);
+  }
+
+  const zone = await findArrondissementZoneForCoordinates(Zone, lng, lat);
+  if (!zone) {
+    return res.status(400).json({
+      message:
+        'Aucune commune ne correspond à l’emplacement indiqué (périmètre non couvert ou carte imprécise). Déplacez le point dans votre commune ou contactez votre mairie.',
     });
+  }
 
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`zone:${zone.id}`).emit('suggestion:created', {
-        id: String(doc.id),
-        zoneId: zone.id,
-      });
-    }
+  let photoCitoyen = null;
+  if (req.file) {
+    photoCitoyen = publicUrlForStoredFile(req.file.filename);
+  }
 
-    return res.status(201).json({ suggestion: doc });
-  },
-);
+  const doc = await SuggestionCitoyen.create({
+    description,
+    typeSuggere,
+    pseudoCitoyen,
+    zoneId: zone.id,
+    localisation: { latitude: lat, longitude: lng },
+    dateSoumission: new Date(),
+    photoCitoyen,
+  });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(`zone:${zone.id}`).emit('suggestion:created', {
+      id: String(doc.id),
+      zoneId: zone.id,
+    });
+  }
+
+  return res.status(201).json({
+    suggestion: doc,
+    zoneAttribution: { id: zone.id, nom: zone.nom, code: zone.code },
+  });
+});
 
 module.exports = router;

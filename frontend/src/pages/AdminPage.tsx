@@ -20,7 +20,7 @@ import type {
   TypeZone,
   Zone,
 } from '../types';
-import { OrgEmailLocalField, fullOrgEmail } from '../components/OrgEmailLocalField';
+import { OrgEmailLocalField, fullOrgEmail, localPartFromInput } from '../components/OrgEmailLocalField';
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
 const MADAGASCAR_BOUNDS = {
@@ -46,6 +46,17 @@ type SuperAdminZoneType = 'ARRONDISSEMENT' | 'ROUTE_NATIONALE';
 
 const SUPER_ADMIN_ZONE_TYPES: SuperAdminZoneType[] = ['ARRONDISSEMENT', 'ROUTE_NATIONALE'];
 
+type QgAdminEditRow = {
+  id: string;
+  nom: string;
+  prenom: string;
+  emailLocal: string;
+  /** Vide = ne pas changer le mot de passe. */
+  password: string;
+  numeroTelephone: string;
+  matricule: string;
+};
+
 type ZoneDraft = {
   id?: string;
   nom: string;
@@ -60,6 +71,8 @@ type ZoneDraft = {
   qgPassword: string;
   qgNumeroTelephone: string;
   qgMatricule: string;
+  /** Modification : admins QG déjà rattachés au périmètre. */
+  qgAdminRows: QgAdminEditRow[];
 };
 
 const EMPTY_DRAFT: ZoneDraft = {
@@ -74,6 +87,7 @@ const EMPTY_DRAFT: ZoneDraft = {
   qgPassword: '',
   qgNumeroTelephone: '',
   qgMatricule: '',
+  qgAdminRows: [],
 };
 
 function verticesToGeoJson(vertices: { lat: number; lng: number }[]): GeoJsonPolygon | null {
@@ -187,6 +201,7 @@ export function AdminPage() {
   const [showNewZoneForm, setShowNewZoneForm] = useState(false);
   /** Carte interactive (point central + tracer) : après « Ajouter un emplacement », ou toujours en édition. */
   const [mapPlacementActive, setMapPlacementActive] = useState(false);
+  const [detailZone, setDetailZone] = useState<Zone | null>(null);
   const zoneCountByType = useMemo(
     () => ({
       all: zones.length,
@@ -211,6 +226,45 @@ export function AdminPage() {
       setAdmins(a.admins);
     },
     [],
+  );
+
+  const openZoneForEdit = useCallback(
+    (z: Zone) => {
+      if (z.type === 'DEPOT_REPARATION') return;
+      const t: SuperAdminZoneType =
+        z.type === 'ROUTE_NATIONALE' ? 'ROUTE_NATIONALE' : 'ARRONDISSEMENT';
+      setShowNewZoneForm(false);
+      setMapPlacementActive(true);
+      setSideOpen(true);
+      setDraft({
+        id: z.id,
+        nom: z.nom,
+        type: t,
+        code: z.code,
+        numeroQg: z.numeroQg || '',
+        vertices: geoJsonToVertices(z.geometrie),
+        qgPrenom: '',
+        qgNom: '',
+        qgEmailLocal: '',
+        qgPassword: '',
+        qgNumeroTelephone: '',
+        qgMatricule: '',
+        qgAdminRows: admins
+          .filter((a) => a.zoneId === z.id)
+          .map((a) => ({
+            id: a.id,
+            nom: a.nom,
+            prenom: a.prenom,
+            emailLocal: localPartFromInput(a.email),
+            password: '',
+            numeroTelephone: a.numeroTelephone || '',
+            matricule: a.matricule || '',
+          })),
+      });
+      setMsg(null);
+      setErr(null);
+    },
+    [admins],
   );
 
   const tryJwt = useCallback(async () => {
@@ -482,7 +536,23 @@ export function AdminPage() {
                     setErr(null);
                     if (draft.id) {
                       await api.adminUpdateZone(draft.id, payload, adminOpts);
-                      setMsg('Enregistrement effectué.');
+                      for (const row of draft.qgAdminRows) {
+                        const pwd = row.password.trim();
+                        if (pwd.length > 0 && pwd.length < 8) {
+                          setErr('Mot de passe : 8 caractères minimum, ou laisser vide pour ne pas changer.');
+                          return;
+                        }
+                        const patch: Parameters<typeof api.adminUpdateQgAdmin>[1] = {
+                          nom: row.nom.trim(),
+                          prenom: row.prenom.trim(),
+                          email: fullOrgEmail(row.emailLocal),
+                          numeroTelephone: row.numeroTelephone.trim(),
+                          matricule: row.matricule.trim() || null,
+                        };
+                        if (pwd.length >= 8) patch.password = pwd;
+                        await api.adminUpdateQgAdmin(row.id, patch, adminOpts);
+                      }
+                      setMsg('Enregistrement effectué (périmètre et comptes QG).');
                     } else {
                       const { zone } = await api.adminCreateZone(payload, adminOpts);
                       if (qgAdmin) {
@@ -526,30 +596,8 @@ export function AdminPage() {
 
               <ZoneList
                 zones={zones}
-                onEdit={(z) => {
-                  if (z.type === 'DEPOT_REPARATION') return;
-                  const t: SuperAdminZoneType =
-                    z.type === 'ROUTE_NATIONALE' ? 'ROUTE_NATIONALE' : 'ARRONDISSEMENT';
-                  setShowNewZoneForm(false);
-                  setMapPlacementActive(true);
-                  setSideOpen(true);
-                  setDraft({
-                    id: z.id,
-                    nom: z.nom,
-                    type: t,
-                    code: z.code,
-                    numeroQg: z.numeroQg || '',
-                    vertices: geoJsonToVertices(z.geometrie),
-                    qgPrenom: '',
-                    qgNom: '',
-                    qgEmailLocal: '',
-                    qgPassword: '',
-                    qgNumeroTelephone: '',
-                    qgMatricule: '',
-                  });
-                  setMsg(null);
-                  setErr(null);
-                }}
+                onDetail={(z) => setDetailZone(z)}
+                onEdit={openZoneForEdit}
                 onDelete={async (z) => {
                   if (z.type === 'DEPOT_REPARATION') return;
                   if (!confirm(`Supprimer définitivement « ${z.nom} » ?`)) return;
@@ -601,6 +649,18 @@ export function AdminPage() {
           </section>
         ) : null}
       </div>
+
+      {detailZone ? (
+        <ZoneDetailModal
+          zone={detailZone}
+          linkedAdmins={admins.filter((a) => a.zoneId === detailZone.id)}
+          onClose={() => setDetailZone(null)}
+          onEdit={(z) => {
+            setDetailZone(null);
+            openZoneForEdit(z);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -608,6 +668,169 @@ export function AdminPage() {
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                     */
 /* ------------------------------------------------------------------ */
+
+function formatShortDate(iso?: string): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return null;
+  }
+}
+
+function ZoneDetailModal({
+  zone,
+  linkedAdmins,
+  onClose,
+  onEdit,
+}: {
+  zone: Zone;
+  linkedAdmins: AdminQg[];
+  onClose: () => void;
+  onEdit: (z: Zone) => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const vertices = geoJsonToVertices(zone.geometrie);
+  const nVert = vertices.length;
+  const regionEstim =
+    zone.type === 'ARRONDISSEMENT' && nVert >= 3 ? inferRegionFromVertices(vertices) : null;
+  const created = formatShortDate(zone.createdAt);
+  const updated = formatShortDate(zone.updatedAt);
+
+  return (
+    <div
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="zone-detail-title"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="modal"
+        style={{ width: 'min(540px, 100%)' }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <h3 id="zone-detail-title" style={{ marginTop: 0 }}>
+          Détail du périmètre
+        </h3>
+        <p style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: 12 }}>{zone.nom}</p>
+        <dl
+          style={{
+            margin: '0 0 16px',
+            display: 'grid',
+            gap: '6px 12px',
+            gridTemplateColumns: 'auto 1fr',
+            fontSize: '0.9rem',
+          }}
+        >
+          <dt className="muted small" style={{ margin: 0 }}>
+            Type
+          </dt>
+          <dd style={{ margin: 0 }}>{ZONE_TYPE_LABEL[zone.type as TypeZone] || zone.type}</dd>
+          <dt className="muted small" style={{ margin: 0 }}>
+            Code
+          </dt>
+          <dd style={{ margin: 0 }}>{zone.code}</dd>
+          {regionEstim ? (
+            <>
+              <dt className="muted small" style={{ margin: 0 }}>
+                Région (estim.)
+              </dt>
+              <dd style={{ margin: 0 }}>{REGION_LABELS[regionEstim]}</dd>
+            </>
+          ) : null}
+          <dt className="muted small" style={{ margin: 0 }}>
+            Contact périmètre
+          </dt>
+          <dd style={{ margin: 0 }}>{zone.numeroQg?.trim() || '—'}</dd>
+          <dt className="muted small" style={{ margin: 0 }}>
+            Géométrie
+          </dt>
+          <dd style={{ margin: 0 }}>
+            {nVert >= 3
+              ? `Polygone · ${nVert} sommets`
+              : nVert > 0
+                ? `${nVert} point(s) — délimitation incomplète`
+                : 'Non renseignée'}
+          </dd>
+          <dt className="muted small" style={{ margin: 0 }}>
+            Identifiant
+          </dt>
+          <dd style={{ margin: 0, wordBreak: 'break-all' }} className="muted small">
+            {zone.id}
+          </dd>
+          {created ? (
+            <>
+              <dt className="muted small" style={{ margin: 0 }}>
+                Créé
+              </dt>
+              <dd style={{ margin: 0 }}>{created}</dd>
+            </>
+          ) : null}
+          {updated ? (
+            <>
+              <dt className="muted small" style={{ margin: 0 }}>
+                Modifié
+              </dt>
+              <dd style={{ margin: 0 }}>{updated}</dd>
+            </>
+          ) : null}
+        </dl>
+
+        <div style={{ marginBottom: 16 }}>
+          <div className="small" style={{ fontWeight: 700, marginBottom: 8 }}>
+            Comptes QG rattachés ({linkedAdmins.length})
+          </div>
+          {linkedAdmins.length === 0 ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              Aucun administrateur QG pour ce périmètre.
+            </p>
+          ) : (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {linkedAdmins.map((a) => (
+                <li
+                  key={a.id}
+                  style={{
+                    padding: '8px 0',
+                    borderTop: '1px solid rgba(15, 23, 42, 0.08)',
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {a.prenom} {a.nom}
+                    {!a.actif ? <span className="muted small"> · compte désactivé</span> : null}
+                  </div>
+                  <div className="muted small">
+                    {a.email}
+                    {a.numeroTelephone ? ` · ${a.numeroTelephone}` : ''}
+                    {a.matricule ? ` · mat. ${a.matricule}` : ''}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="row admin-form-actions" style={{ marginTop: 8 }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            Fermer
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => onEdit(zone)}>
+            Modifier
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ZoneEditor({
   draft,
@@ -650,10 +873,12 @@ function ZoneEditor({
   const geojson = useMemo(() => verticesToGeoJson(draft.vertices), [draft.vertices]);
   const isNewZone = !draft.id;
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [localFormErr, setLocalFormErr] = useState<string | null>(null);
 
   return (
     <section className="form bubble-card">
       <h3>{draft.id ? 'Modification du périmètre' : 'Création d’un périmètre'}</h3>
+      {localFormErr ? <p className="alert error">{localFormErr}</p> : null}
       {isNewZone && carteVisible && !mapPlacementActive && onBeginMapPlacement ? (
         <div
           role="region"
@@ -687,6 +912,7 @@ function ZoneEditor({
         ref={formRef}
         onSubmit={(e) => {
           e.preventDefault();
+          setLocalFormErr(null);
           if (!formRef.current?.checkValidity()) {
             formRef.current?.reportValidity();
             return;
@@ -725,6 +951,25 @@ function ZoneEditor({
               !qgAdmin.numeroTelephone
             ) {
               return;
+            }
+          }
+          if (!isNewZone && draft.qgAdminRows.length > 0) {
+            for (const row of draft.qgAdminRows) {
+              if (
+                !row.nom.trim() ||
+                !row.prenom.trim() ||
+                !row.emailLocal.trim() ||
+                !row.numeroTelephone.trim()
+              ) {
+                setLocalFormErr('Complétez tous les champs obligatoires pour chaque administrateur QG.');
+                return;
+              }
+              if (row.password.length > 0 && row.password.length < 8) {
+                setLocalFormErr(
+                  'Mot de passe : au moins 8 caractères, ou laissez vide pour ne pas le modifier.',
+                );
+                return;
+              }
             }
           }
           void onSave(zonePayload, qgAdmin);
@@ -770,6 +1015,130 @@ function ZoneEditor({
           placeholder="+261 …"
         />
       </label>
+      {!isNewZone && (draft.type === 'ARRONDISSEMENT' || draft.type === 'ROUTE_NATIONALE') ? (
+        <div style={{ marginTop: 14 }}>
+          <h4 className="small" style={{ fontWeight: 700, margin: '0 0 10px' }}>
+            Comptes administrateur QG
+          </h4>
+          <p className="muted small" style={{ marginTop: 0, marginBottom: 10, lineHeight: 1.45 }}>
+            Nom, prénom, courriel, téléphone et mot de passe (facultatif : laisser vide pour conserver l’actuel).
+          </p>
+          {draft.qgAdminRows.length === 0 ? (
+            <p className="muted small" style={{ lineHeight: 1.45 }}>
+              Aucun compte QG rattaché — créez-en depuis l’onglet « Comptes QG ».
+            </p>
+          ) : (
+            draft.qgAdminRows.map((row, idx) => (
+              <fieldset
+                key={row.id}
+                style={{
+                  marginBottom: 12,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(15, 23, 42, 0.12)',
+                  background: 'rgba(248, 250, 252, 0.9)',
+                }}
+              >
+                <legend className="small" style={{ fontWeight: 600, padding: '0 6px' }}>
+                  Administrateur #{idx + 1}
+                </legend>
+                <label>
+                  Nom
+                  <input
+                    required
+                    value={row.nom}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, nom: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Prénom
+                  <input
+                    required
+                    value={row.prenom}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, prenom: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Courriel
+                  <OrgEmailLocalField
+                    required
+                    value={row.emailLocal}
+                    onChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, emailLocal: v } : r,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Nouveau mot de passe (facultatif)
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={row.password}
+                    placeholder="8 caractères min. — vide = inchangé"
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, password: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Téléphone
+                  <input
+                    required
+                    value={row.numeroTelephone}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, numeroTelephone: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                    placeholder="+261 …"
+                  />
+                </label>
+                <label>
+                  Matricule (facultatif)
+                  <input
+                    value={row.matricule}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        qgAdminRows: d.qgAdminRows.map((r, i) =>
+                          i === idx ? { ...r, matricule: e.target.value } : r,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+              </fieldset>
+            ))
+          )}
+        </div>
+      ) : null}
       {isNewZone && draft.type === 'ARRONDISSEMENT' ? (
         <fieldset
           className="admin-zone-qg-fieldset"
@@ -879,10 +1248,12 @@ function ZoneEditor({
 
 function ZoneList({
   zones,
+  onDetail,
   onEdit,
   onDelete,
 }: {
   zones: Zone[];
+  onDetail: (z: Zone) => void;
   onEdit: (z: Zone) => void;
   onDelete: (z: Zone) => Promise<void> | void;
 }) {
@@ -938,6 +1309,9 @@ function ZoneList({
                 </div>
               </div>
               <div className="admin-list-item-actions">
+                <button type="button" className="btn btn-ghost small" onClick={() => onDetail(z)}>
+                  Détail
+                </button>
                 <button type="button" className="btn btn-ghost small" onClick={() => onEdit(z)}>
                   Modifier
                 </button>
@@ -1127,6 +1501,8 @@ function PolygonPicker({
   const [confirmedCenter, setConfirmedCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [regionFilter, setRegionFilter] = useState<'ALL' | RegionName>('ALL');
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+  /** Consultation carte : axe routier national (exclusif avec la commune sélectionnée). */
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!apiKey) {
@@ -1237,6 +1613,36 @@ function PolygonPicker({
     () => filteredCommunes.find((z) => z.id === selectedZoneId)?.vertices ?? null,
     [filteredCommunes, selectedZoneId],
   );
+  const routeZones = useMemo(
+    () =>
+      zones
+        .filter((z) => z.type === 'ROUTE_NATIONALE')
+        .slice()
+        .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    [zones],
+  );
+  const selectedRouteVertices = useMemo(() => {
+    const z = zones.find((x) => x.id === selectedRouteId && x.type === 'ROUTE_NATIONALE');
+    if (!z) return null;
+    const v = geoJsonToVertices(z.geometrie);
+    return v.length >= 3 ? v : null;
+  }, [zones, selectedRouteId]);
+  const focusReferenceVertices = selectedZoneVertices ?? selectedRouteVertices;
+  const consultedZone = useMemo(() => {
+    if (selectedZoneId) return zones.find((z) => z.id === selectedZoneId) ?? null;
+    if (selectedRouteId) return zones.find((z) => z.id === selectedRouteId) ?? null;
+    return null;
+  }, [zones, selectedZoneId, selectedRouteId]);
+  const consultedVerticesCount = useMemo(() => {
+    if (!consultedZone) return 0;
+    return geoJsonToVertices(consultedZone.geometrie).length;
+  }, [consultedZone]);
+  const consultedCommuneRegion = useMemo(() => {
+    if (!consultedZone || consultedZone.type !== 'ARRONDISSEMENT') return null;
+    const v = geoJsonToVertices(consultedZone.geometrie);
+    if (v.length < 3) return null;
+    return inferRegionFromVertices(v);
+  }, [consultedZone]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -1356,13 +1762,36 @@ function PolygonPicker({
             Commune
             <select
               value={selectedZoneId}
-              onChange={(e) => setSelectedZoneId(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedZoneId(id);
+                if (id) setSelectedRouteId('');
+              }}
               style={{ minWidth: 230 }}
             >
               <option value="">Commune de référence…</option>
               {filteredCommunes.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.nom} ({REGION_LABELS[z.region]})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            Route nationale
+            <select
+              value={selectedRouteId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedRouteId(id);
+                if (id) setSelectedZoneId('');
+              }}
+              style={{ minWidth: 230 }}
+            >
+              <option value="">Axe de référence…</option>
+              {routeZones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.nom} ({z.code})
                 </option>
               ))}
             </select>
@@ -1393,6 +1822,64 @@ function PolygonPicker({
           )
         ) : null}
       </div>
+
+      {consultedZone ? (
+        <div
+          role="region"
+          aria-label="Détail du périmètre consulté"
+          style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: '1px solid rgba(15, 23, 42, 0.1)',
+            background: 'rgba(248, 250, 252, 0.98)',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{consultedZone.nom}</div>
+          <dl
+            style={{
+              margin: 0,
+              display: 'grid',
+              gap: '6px 16px',
+              gridTemplateColumns: 'auto 1fr',
+              fontSize: '0.88rem',
+              alignItems: 'baseline',
+            }}
+          >
+            <dt className="muted small" style={{ margin: 0 }}>
+              Type
+            </dt>
+            <dd style={{ margin: 0 }}>
+              {ZONE_TYPE_LABEL[consultedZone.type as TypeZone] || consultedZone.type}
+            </dd>
+            <dt className="muted small" style={{ margin: 0 }}>
+              Code
+            </dt>
+            <dd style={{ margin: 0 }}>{consultedZone.code}</dd>
+            {consultedCommuneRegion ? (
+              <>
+                <dt className="muted small" style={{ margin: 0 }}>
+                  Région (estim.)
+                </dt>
+                <dd style={{ margin: 0 }}>{REGION_LABELS[consultedCommuneRegion]}</dd>
+              </>
+            ) : null}
+            <dt className="muted small" style={{ margin: 0 }}>
+              Contact
+            </dt>
+            <dd style={{ margin: 0 }}>{consultedZone.numeroQg?.trim() || '—'}</dd>
+            <dt className="muted small" style={{ margin: 0 }}>
+              Géométrie
+            </dt>
+            <dd style={{ margin: 0 }}>
+              {consultedVerticesCount >= 3
+                ? `Polygone · ${consultedVerticesCount} sommets`
+                : consultedVerticesCount > 0
+                  ? `${consultedVerticesCount} point(s) — délimitation incomplète`
+                  : 'Non renseignée'}
+            </dd>
+          </dl>
+        </div>
+      ) : null}
 
       {interactionEnabled ? (
         stage === 'pick' ? (
@@ -1438,7 +1925,7 @@ function PolygonPicker({
           onClick={addVertexFromClick}
           style={{ width: '100%', height: '100%' }}
         >
-          <SelectedCommuneFocus vertices={selectedZoneVertices} />
+          <SelectedCommuneFocus vertices={focusReferenceVertices} />
           {zonePolygons.map((zone) => (
             <Polygon
               key={zone.id}

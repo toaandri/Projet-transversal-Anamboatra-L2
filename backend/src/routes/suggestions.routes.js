@@ -4,7 +4,7 @@ const { SuggestionCitoyen, User } = require('../models/postgres');
 const { authenticate } = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/requireRole');
 const { RoleEnum, TerrainClotureCodeEnum } = require('../constants/enums');
-const { suggestionsWhere } = require('../services/mapFilterService');
+const { suggestionsWhere, filterSuggestionsByZoneGeometry } = require('../services/mapFilterService');
 
 const router = express.Router();
 
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
   };
   const q = suggestionsWhere(principal);
   if (!q) return res.json({ suggestions: [] });
-  const suggestions = await SuggestionCitoyen.findAll({
+  let suggestions = await SuggestionCitoyen.findAll({
     where: q,
     order: [['createdAt', 'DESC']],
     include: [
@@ -46,6 +46,7 @@ router.get('/', async (req, res) => {
       },
     ],
   });
+  suggestions = await filterSuggestionsByZoneGeometry(principal, suggestions);
   return res.json({ suggestions: suggestions.map(serializeSuggestion) });
 });
 
@@ -63,6 +64,16 @@ router.get('/:id', param('id').isUUID(), async (req, res) => {
     role: req.auth.role,
   };
   if (!canSeeSuggestion(auth, sug)) return res.status(403).json({ message: 'Accès refusé' });
+
+  const principal = {
+    role: req.auth.role,
+    zoneId: req.auth.zoneId,
+    userId: req.auth.sub,
+  };
+  const geoScoped = await filterSuggestionsByZoneGeometry(principal, [sug]);
+  if (geoScoped.length === 0) {
+    return res.status(403).json({ message: 'Suggestion hors du périmètre cartographique de votre zone.' });
+  }
 
   return res.json({ suggestion: serializeSuggestion(sug) });
 });

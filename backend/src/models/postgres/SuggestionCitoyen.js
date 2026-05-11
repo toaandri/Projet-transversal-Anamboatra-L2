@@ -26,6 +26,12 @@ function defineSuggestionCitoyen(sequelize) {
       traitee: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       zoneId: { type: DataTypes.UUID, allowNull: false, field: 'zone_id' },
       localisation: { type: DataTypes.JSONB, allowNull: false },
+      /** Photo d’illustration facultative (signalement public). */
+      photoCitoyen: {
+        type: DataTypes.STRING(512),
+        allowNull: true,
+        field: 'photo_citoyen',
+      },
       /** Ordre QG — agent désigné pour se rendre sur place avant signalement officiel. */
       assignedPatrolUserId: {
         type: DataTypes.UUID,

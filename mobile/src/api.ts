@@ -1,6 +1,14 @@
 import { API_URL } from './config';
 import { getToken } from './auth';
-import type { MapTilesPayload, SuggestionCitoyen, TerrainClotureCodePatrouille, Ticket, User, Zone } from './types';
+import type {
+  MapTilesPayload,
+  SuggestionCitoyen,
+  TerrainClotureCodePatrouille,
+  Ticket,
+  TypeInfrastructure,
+  User,
+  Zone,
+} from './types';
 
 async function parse<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -90,7 +98,7 @@ export const api = {
   createTicket: async (form: {
     description: string;
     urgence: 'NORMAL' | 'URGENT';
-    typeInfrastructure: 'ROUTE' | 'ELECTRICITE' | 'EAU';
+    typeInfrastructure: TypeInfrastructure;
     latitude: number;
     longitude: number;
     photoUri: string;

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,9 +29,21 @@ function formatDate(iso?: string): string {
 
 /* ─── Barre de progression de statut ─────────────────────────────────────── */
 const STEPS: Ticket['statut'][] = ['REPARATION_PREVUE', 'EN_REPARATION', 'TERMINE'];
+const STEPS_INDEX = new Map<Ticket['statut'], number>(STEPS.map((s, i) => [s, i]));
+
+const STATUT_RANK_MISSIONS = new Map<Ticket['statut'], number>([
+  ['EN_REPARATION', 0],
+  ['REPARATION_PREVUE', 1],
+  ['TERMINE', 2],
+  ['CLOTURE', 3],
+  ['EN_ATTENTE_CONFIRMATION', 4],
+]);
+
+const ACTIVE_TAB_STATUTS = new Set<Ticket['statut']>(['EN_REPARATION', 'REPARATION_PREVUE']);
+const HIST_TAB_STATUTS = new Set<Ticket['statut']>(['TERMINE', 'CLOTURE']);
 
 function StatusStepper({ statut }: { statut: Ticket['statut'] }) {
-  const currentIdx = STEPS.indexOf(statut as (typeof STEPS)[number]);
+  const currentIdx = STEPS_INDEX.get(statut as (typeof STEPS)[number]) ?? -1;
   return (
     <View style={styles.stepper}>
       {STEPS.map((step, i) => {
@@ -263,14 +275,7 @@ export default function MissionsScreen() {
       const { tickets: list } = await api.tickets();
       const myId = user?.id ?? '';
       const mine = list.filter((t) => t.mission?.assignedUserIds?.includes(myId));
-      const ORDER: Partial<Record<Ticket['statut'], number>> = {
-        EN_REPARATION: 0,
-        REPARATION_PREVUE: 1,
-        TERMINE: 2,
-        CLOTURE: 3,
-        EN_ATTENTE_CONFIRMATION: 4,
-      };
-      mine.sort((a, b) => (ORDER[a.statut] ?? 9) - (ORDER[b.statut] ?? 9));
+      mine.sort((a, b) => (STATUT_RANK_MISSIONS.get(a.statut) ?? 9) - (STATUT_RANK_MISSIONS.get(b.statut) ?? 9));
       setTickets(mine);
     } catch (e) {
       console.warn(e);
@@ -284,13 +289,17 @@ export default function MissionsScreen() {
     useCallback(() => { void load(); }, [load]),
   );
 
-  const activeMissions = tickets.filter(
-    (t) => t.statut === 'EN_REPARATION' || t.statut === 'REPARATION_PREVUE',
-  );
-  const histMissions = tickets.filter(
-    (t) => t.statut === 'TERMINE' || t.statut === 'CLOTURE',
-  );
-  const currentActiveMission = tickets.find((t) => t.statut === 'EN_REPARATION') ?? null;
+  const { activeMissions, histMissions, currentActiveMission } = useMemo(() => {
+    const active: Ticket[] = [];
+    const hist: Ticket[] = [];
+    let current: Ticket | null = null;
+    for (const t of tickets) {
+      if (t.statut === 'EN_REPARATION' && !current) current = t;
+      if (ACTIVE_TAB_STATUTS.has(t.statut)) active.push(t);
+      if (HIST_TAB_STATUTS.has(t.statut)) hist.push(t);
+    }
+    return { activeMissions: active, histMissions: hist, currentActiveMission: current };
+  }, [tickets]);
 
   const displayed = tab === 'actives' ? activeMissions : histMissions;
 

@@ -52,10 +52,13 @@ export const ROLE_LABELS = {
   CITOYEN: 'Citoyen',
 };
 
-export const TYPE_LABELS = {
+export const TYPE_LABELS: Record<string, string> = {
   ROUTE: 'Route',
-  ELECTRICITE: 'Électricité',
-  EAU: 'Eau',
+  ELECTRICITE_EAU: 'Électricité / eau',
+  PROPRIETE_PUBLIQUE: 'Propriété publique',
+  SALUBRITE: 'Propreté (salubrité)',
+  ELECTRICITE: 'Électricité / eau',
+  EAU: 'Électricité / eau',
 };
 
 export const STATUT_COLORS: Record<string, string> = {
@@ -68,8 +71,11 @@ export const STATUT_COLORS: Record<string, string> = {
 
 export const TYPE_COLORS: Record<string, string> = {
   ROUTE: '#64748b',
-  ELECTRICITE: '#f59e0b',
-  EAU: '#0ea5e9',
+  ELECTRICITE_EAU: '#0e7490',
+  PROPRIETE_PUBLIQUE: '#7c3aed',
+  SALUBRITE: '#15803d',
+  ELECTRICITE: '#0e7490',
+  EAU: '#0e7490',
 };
 
 export function markerColorForFeature(p: {

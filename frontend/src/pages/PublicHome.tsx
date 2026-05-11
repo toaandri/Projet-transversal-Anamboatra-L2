@@ -1,21 +1,49 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { MapView } from '../components/MapView';
-import type { GeoJsonFeature, TypeInfrastructure, Zone } from '../types';
+import { STATUT_LABELS } from '../mapColors';
+import type { GeoJsonFeature, Statut, TypeInfrastructure } from '../types';
 import { useMapSocket } from '../useMapSocket';
 
-const TYPE_COLORS: Record<TypeInfrastructure, string> = {
+const TYPE_LABELS: Record<string, string> = {
+  ROUTE: 'Route',
+  ELECTRICITE_EAU: 'Électricité / eau',
+  PROPRIETE_PUBLIQUE: 'Propriété publique',
+  SALUBRITE: 'Propreté (salubrité)',
+  ELECTRICITE: 'Électricité / eau',
+  EAU: 'Électricité / eau',
+};
+
+const TYPE_COLORS: Record<string, string> = {
   ROUTE: '#64748b',
-  ELECTRICITE: '#f59e0b',
-  EAU: '#0ea5e9',
+  ELECTRICITE_EAU: '#0e7490',
+  PROPRIETE_PUBLIQUE: '#7c3aed',
+  SALUBRITE: '#15803d',
+  ELECTRICITE: '#0e7490',
+  EAU: '#0e7490',
 };
 
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
   { v: 'ROUTE', l: 'Route', color: TYPE_COLORS.ROUTE },
-  { v: 'ELECTRICITE', l: 'Électricité', color: TYPE_COLORS.ELECTRICITE },
-  { v: 'EAU', l: 'Eau', color: TYPE_COLORS.EAU },
+  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: TYPE_COLORS.ELECTRICITE_EAU },
+  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: TYPE_COLORS.PROPRIETE_PUBLIQUE },
+  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: TYPE_COLORS.SALUBRITE },
 ];
+
+function truncateText(s: string, max: number): string {
+  const t = s.trim().replace(/\s+/g, ' ');
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
+const STATUT_DOT: Partial<Record<Statut, string>> = {
+  EN_ATTENTE_CONFIRMATION: '#dc2626',
+  REPARATION_PREVUE: '#f97316',
+  EN_REPARATION: '#3b82f6',
+  TERMINE: '#22c55e',
+  CLOTURE: '#16a34a',
+};
 
 function initialCitizenSideOpen(): boolean {
   if (typeof window === 'undefined') return true;
@@ -24,19 +52,41 @@ function initialCitizenSideOpen(): boolean {
 
 export function PublicHome() {
   const [features, setFeatures] = useState<GeoJsonFeature[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const [zoneId, setZoneId] = useState('');
   const [typeSuggere, setTypeSuggere] = useState<TypeInfrastructure>('ROUTE');
   const [description, setDescription] = useState('');
   const [pseudo, setPseudo] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [pick, setPick] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sideOpen, setSideOpen] = useState(initialCitizenSideOpen);
+  const [formExpanded, setFormExpanded] = useState(false);
+  const [mapFocus, setMapFocus] = useState<{ index: number; nonce: number } | null>(null);
+  const mapFocusNonce = useRef(0);
+
+  const publicSignalements = useMemo(() => {
+    return features
+      .map((f, geoIdx) => ({ f, geoIdx }))
+      .filter((x) => (x.f.properties as { kind?: string }).kind === 'ticket')
+      .sort((a, b) => {
+        const da = new Date(
+          String((a.f.properties as { dateSignalement?: string }).dateSignalement || 0),
+        ).getTime();
+        const db = new Date(
+          String((b.f.properties as { dateSignalement?: string }).dateSignalement || 0),
+        ).getTime();
+        return db - da;
+      });
+  }, [features]);
+
+  function requestMapFocus(geoIdx: number) {
+    mapFocusNonce.current += 1;
+    setMapFocus({ index: geoIdx, nonce: mapFocusNonce.current });
+  }
 
   useEffect(() => {
     if (!sideOpen) return;
@@ -62,29 +112,18 @@ export function PublicHome() {
   }, [load]);
   useMapSocket(load);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const { zones: z } = await api.publicZones();
-        setZones(z);
-        setZoneId((prev) => (prev ? prev : z[0]?.id ?? ''));
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, []);
-
   const cancelSuggestion = useCallback(() => {
     setDescription('');
     setPseudo('');
+    setPhoto(null);
     setLat(null);
     setLng(null);
     setPick(false);
     setTypeSuggere('ROUTE');
-    setZoneId(zones[0]?.id ?? '');
     setErr(null);
     setOk(null);
-  }, [zones]);
+    setFormExpanded(false);
+  }, []);
 
   async function submitSuggestion(e: React.FormEvent) {
     e.preventDefault();
@@ -94,26 +133,27 @@ export function PublicHome() {
       setErr('Une position géographique sur la carte est obligatoire.');
       return;
     }
-    if (!zoneId) {
-      setErr('Sélection de la zone administrative obligatoire.');
-      return;
-    }
     setSubmitting(true);
     try {
-      await api.publicSuggestion({
+      const { zoneAttribution } = await api.publicSuggestion({
         description,
         typeSuggere,
         latitude: lat,
         longitude: lng,
-        zoneId,
         pseudoCitoyen: pseudo || undefined,
+        photo: photo || undefined,
       });
-      setOk('Transmission reçue. La proposition sera traitée selon le circuit officiel.');
+      const zoneLine = zoneAttribution
+        ? ` Affectation automatique : ${zoneAttribution.nom} (${zoneAttribution.code}).`
+        : '';
+      setOk(`Transmission reçue.${zoneLine} La proposition sera traitée selon le circuit officiel.`);
       setDescription('');
       setPseudo('');
+      setPhoto(null);
       setLat(null);
       setLng(null);
       setPick(false);
+      setFormExpanded(false);
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
@@ -154,8 +194,12 @@ export function PublicHome() {
               <span className="qg-mark-pin" />
             </span>
             <div className="qg-header-text">
-              <small>Plateforme Anamboatra</small>
-              <strong>Carte publique</strong>
+              <div>
+                <small>Plateforme Anamboatra</small>
+              </div>
+              <div>
+                <strong>Carte publique</strong>
+              </div>
               <div className="muted small">Signalement hors compte — coordonnées obligatoires</div>
             </div>
           </div>
@@ -184,13 +228,85 @@ export function PublicHome() {
                 <h3>Information affichée</h3>
               </div>
             </header>
-              <p className="muted small" style={{ margin: 0, lineHeight: 1.5 }}>
-              Tous les dossiers rendus publics par le MTP sur le territoire figurent sur la carte. Complétez les champs
-              ci-dessous et validez pour transmettre une proposition dans la zone choisie.
+            <p className="muted small" style={{ margin: 0, lineHeight: 1.5 }}>
+              Tous les dossiers rendus publics par le MTP sur le territoire figurent sur la carte. Pour transmettre
+              une proposition, ouvrez le formulaire ci-dessous ; la commune est détectée automatiquement à partir du
+              point sur la carte.
             </p>
           </section>
 
-          <form onSubmit={submitSuggestion} className="public-suggest-form">
+          <section className="qg-section public-signalements-section">
+            <header className="qg-section-head">
+              <span className="qg-section-eyebrow">Signalements</span>
+              <div className="qg-section-titlerow">
+                <h3>Dossiers visibles</h3>
+                <span className="qg-section-meta">{publicSignalements.length}</span>
+              </div>
+            </header>
+            {publicSignalements.length === 0 ? (
+              <p className="muted small public-signalements-empty">
+                Aucun signalement public sur la carte pour le moment.
+              </p>
+            ) : (
+              <ul
+                className="public-signalement-list"
+                aria-label="Liste des signalements publics"
+                style={{ listStyle: 'none', margin: 0, padding: 0 }}
+              >
+                {publicSignalements.map(({ f, geoIdx }) => {
+                  const p = f.properties as {
+                    id?: string;
+                    statut?: Statut;
+                    typeInfrastructure?: TypeInfrastructure;
+                    description?: string;
+                    dateSignalement?: string;
+                  };
+                  const statut = p.statut || 'EN_ATTENTE_CONFIRMATION';
+                  const typeInf = p.typeInfrastructure || 'ROUTE';
+                  return (
+                    <li key={p.id || String(geoIdx)} style={{ listStyle: 'none' }}>
+                      <button
+                        type="button"
+                        className="public-signalement-item"
+                        onClick={() => requestMapFocus(geoIdx)}
+                      >
+                        <span
+                          className="public-signalement-item-dot"
+                          style={{
+                            background: STATUT_DOT[statut] || '#94a3b8',
+                          }}
+                          aria-hidden
+                        />
+                        <span className="public-signalement-item-body">
+                          <div className="public-signalement-item-title">
+                            {TYPE_LABELS[typeInf]} · {STATUT_LABELS[statut] ?? statut}
+                          </div>
+                          <div className="public-signalement-item-desc">
+                            {truncateText(p.description || 'Sans description', 96)}
+                          </div>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <div className="public-form-drawer">
+            <button
+              type="button"
+              className={`btn block public-form-toggle ${formExpanded ? 'btn-ghost public-form-toggle--open' : 'btn-primary'}`}
+              onClick={() => setFormExpanded((v) => !v)}
+              aria-expanded={formExpanded}
+            >
+              {formExpanded
+                ? 'Replier le formulaire de proposition'
+                : 'Rédiger une proposition — afficher le formulaire'}
+            </button>
+
+            {formExpanded ? (
+              <form onSubmit={submitSuggestion} className="public-suggest-form">
             <section className="qg-section">
               <header className="qg-section-head">
                 <span className="qg-section-eyebrow">1 · Domaine</span>
@@ -216,26 +332,42 @@ export function PublicHome() {
 
             <section className="qg-section">
               <header className="qg-section-head">
-                <span className="qg-section-eyebrow">2 · Territoire</span>
+                <span className="qg-section-eyebrow">2 · Illustration</span>
                 <div className="qg-section-titlerow">
-                  <h3>Zone</h3>
+                  <h3>Photo du constat</h3>
+                  <span className="qg-section-meta">Facultatif</span>
                 </div>
               </header>
-              <label className="public-field-label">
-                <span className="muted small">Zone</span>
-                <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} required>
-                  <option value="">Sélectionner…</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.nom} ({z.code})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="muted small" style={{ marginTop: 8, lineHeight: 1.45 }}>
-                La commune sert à acheminer votre proposition ; la carte affiche tous les dossiers publics
-                approuvés à l&apos;échelle nationale.
-              </p>
+              <div className="public-file-upload">
+                <p className="public-file-upload-intro muted small">
+                  Recommandé pour appuyer votre réclamation (JPEG, PNG ou WebP, 8&nbsp;Mo max).
+                </p>
+                <div className="public-file-upload-row">
+                  <label className="public-file-upload-label">
+                    <input
+                      type="file"
+                      className="public-file-upload-input"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                    />
+                    <span className="public-file-upload-browse">Joindre un fichier</span>
+                  </label>
+                </div>
+                {photo ? (
+                  <div className="public-file-upload-picked">
+                    <span className="public-file-upload-name" title={photo.name}>
+                      {photo.name}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost small public-file-upload-remove"
+                      onClick={() => setPhoto(null)}
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </section>
 
             <section className="qg-section">
@@ -284,6 +416,9 @@ export function PublicHome() {
                   ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
                   : 'Aucune position'}
               </p>
+              <p className="muted small" style={{ margin: '0 0 8px', lineHeight: 1.45 }}>
+                Ce point sert à déterminer automatiquement la commune d’acheminement de votre proposition.
+              </p>
               <button
                 type="button"
                 className={pick ? 'btn btn-primary block' : 'btn btn-ghost block'}
@@ -301,16 +436,23 @@ export function PublicHome() {
                 {submitting ? 'Transmission…' : 'Transmettre'}
               </button>
             </div>
-          </form>
+              </form>
+            ) : null}
+          </div>
         </aside>
 
-        <section className="panel map-panel">
+        <section
+          className="panel map-panel"
+          style={{ minHeight: 'min(55vh, 560px)' }}
+          aria-label="Carte des signalements publics"
+        >
           <MapView
             geojson={features}
             viewerRole={null}
             compactUI
             height="100%"
             pickMode={pick}
+            focusGeoIndex={mapFocus}
             onPickLatLng={(la, ln) => {
               setLat(la);
               setLng(ln);

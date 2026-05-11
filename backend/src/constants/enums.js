@@ -1,5 +1,14 @@
 /** Aligné sur le cahier des charges v2.3 (base vide + super-admin) */
 
+/**
+ * @template T
+ * @param {Readonly<Record<string, T>>} enumObject
+ * @returns {ReadonlySet<T>}
+ */
+function enumValueSet(enumObject) {
+  return Object.freeze(new Set(Object.values(enumObject)));
+}
+
 const RoleEnum = Object.freeze({
   SUPER_ADMIN: 'SUPER_ADMIN', // compte technique unique (hors UML)
   AGENT_PATROUILLE: 'AGENT_PATROUILLE',
@@ -24,8 +33,11 @@ const StatutEnum = Object.freeze({
 /** Types d'infrastructure remontés par citoyens / agents (ticket / suggestion). */
 const TypeEnum = Object.freeze({
   ROUTE: 'ROUTE',
-  ELECTRICITE: 'ELECTRICITE',
-  EAU: 'EAU',
+  /** Réseaux électricité et eau regroupés (ex-JIRAMA / hydrants). */
+  ELECTRICITE_EAU: 'ELECTRICITE_EAU',
+  PROPRIETE_PUBLIQUE: 'PROPRIETE_PUBLIQUE',
+  /** Salubrité, déchets, propreté urbaine. */
+  SALUBRITE: 'SALUBRITE',
 });
 
 /** Spécialité d'une EQUIPE_INTERVENTION (indépendante de TypeEnum depuis v2.3). */
@@ -58,6 +70,15 @@ const TerrainClotureCodeEnum = Object.freeze({
   AUTRE: 'AUTRE',
 });
 
+/** Appartenance O(1) pour validateurs / parsing (mêmes valeurs que les ENUM Sequelize). */
+const RoleEnumValueSet = enumValueSet(RoleEnum);
+const UrgenceEnumValueSet = enumValueSet(UrgenceEnum);
+const StatutEnumValueSet = enumValueSet(StatutEnum);
+const TypeEnumValueSet = enumValueSet(TypeEnum);
+const SpecialiteEnumValueSet = enumValueSet(SpecialiteEnum);
+const TypeZoneEnumValueSet = enumValueSet(TypeZoneEnum);
+const TerrainClotureCodeEnumValueSet = enumValueSet(TerrainClotureCodeEnum);
+
 module.exports = {
   RoleEnum,
   UrgenceEnum,
@@ -67,4 +88,11 @@ module.exports = {
   TypeZoneEnum,
   MapRole,
   TerrainClotureCodeEnum,
+  RoleEnumValueSet,
+  UrgenceEnumValueSet,
+  StatutEnumValueSet,
+  TypeEnumValueSet,
+  SpecialiteEnumValueSet,
+  TypeZoneEnumValueSet,
+  TerrainClotureCodeEnumValueSet,
 };

@@ -17,7 +17,14 @@ export type Statut =
 export type Urgence = 'NORMAL' | 'URGENT';
 
 /** Types d'infrastructure remontés par citoyens / agents dans un ticket. */
-export type TypeInfrastructure = 'ROUTE' | 'ELECTRICITE' | 'EAU';
+export type TypeInfrastructure =
+  | 'ROUTE'
+  | 'ELECTRICITE_EAU'
+  | 'PROPRIETE_PUBLIQUE'
+  | 'SALUBRITE';
+
+/** Valeurs retournées par l’API avant migration BDD (affichage seulement). */
+export type TypeInfrastructureLegacy = TypeInfrastructure | 'ELECTRICITE' | 'EAU';
 
 /** Spécialité d'une EQUIPE_INTERVENTION (indépendante de TypeInfrastructure). */
 export type Specialite = 'ROUTE' | 'JIRAMA' | 'MACON' | 'NETTOYEUR' | 'REPARATEUR';
@@ -40,6 +47,8 @@ export interface Zone {
   code: string;
   numeroQg?: string | null;
   geometrie?: GeoJsonPolygon | GeoJsonPoint | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GeoJsonPolygon {
@@ -118,7 +127,7 @@ export interface Ticket {
   photoSignalement: string;
   urgence: Urgence;
   statut: Statut;
-  typeInfrastructure: TypeInfrastructure;
+  typeInfrastructure: TypeInfrastructureLegacy;
   zoneId: string;
   localisation: { latitude: number; longitude: number };
   visiblePublic: boolean;
@@ -146,7 +155,7 @@ export interface SuggestionPatrolBrief {
 export interface SuggestionCitoyen {
   id: string;
   description: string;
-  typeSuggere: TypeInfrastructure;
+  typeSuggere: TypeInfrastructureLegacy;
   pseudoCitoyen?: string | null;
   traitee: boolean;
   zoneId: string;
@@ -157,6 +166,7 @@ export interface SuggestionCitoyen {
   instructionQg?: string | null;
   dispatchedAt?: string | null;
   patrolAssignee?: SuggestionPatrolBrief | null;
+  photoCitoyen?: string | null;
   terrainClotureCode?: string | null;
   terrainClotureComment?: string | null;
 }

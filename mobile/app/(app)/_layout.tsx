@@ -20,13 +20,13 @@ import { colors } from '../../src/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
+function TabIcon({ name, focused, equipe }: { name: IoniconsName; focused: boolean; equipe?: boolean }) {
   return (
     <Ionicons
       name={focused ? name : (`${name}-outline` as IoniconsName)}
-      size={24}
+      size={equipe ? 25 : 24}
       color={focused ? colors.accent : colors.muted}
-      style={{ marginTop: 2 }}
+      style={{ marginTop: equipe ? 4 : 2 }}
     />
   );
 }
@@ -38,13 +38,18 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
  * Pour les rôles non-agents (équipe, QG) on rend simplement un slot vide :
  * le tab reste présent dans la barre mais n'est plus cliquable.
  */
-function PlusTabButton({ enabled }: { enabled: boolean }) {
+function PlusTabButton({ enabled, equipe }: { enabled: boolean; equipe?: boolean }) {
   const router = useRouter();
   if (!enabled) {
-    return <View style={styles.plusContainer} />;
+    return (
+      <View
+        style={[styles.plusContainer, equipe && styles.plusContainerEquipe]}
+        pointerEvents="none"
+      />
+    );
   }
   return (
-    <View style={styles.plusContainer} pointerEvents="box-none">
+    <View style={[styles.plusContainer, equipe && styles.plusContainerEquipe]} pointerEvents="box-none">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Nouveau signalement"
@@ -89,12 +94,18 @@ export default function AppLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: isEquipe ? 11 : 10,
           fontWeight: '700',
-          marginBottom: Platform.OS === 'ios' ? 0 : 4,
+          marginBottom: Platform.OS === 'ios' ? 2 : isEquipe ? 6 : 4,
+          marginTop: isEquipe ? 2 : 0,
+          letterSpacing: isEquipe ? 0.15 : 0,
         },
-        tabBarStyle: styles.tabBar,
-        tabBarItemStyle: { paddingTop: 6 },
+        tabBarStyle: {
+          ...styles.tabBar,
+          ...(isEquipe ? styles.tabBarEquipe : {}),
+        },
+        // Équipe : largeur par onglet (3 boutons répartis + mince séparateur au centre.
+        tabBarItemStyle: isEquipe ? undefined : styles.tabBarItemDefault,
       }}
     >
       {/* ── Carte ────────────────────────────────────────────── */}
@@ -102,7 +113,8 @@ export default function AppLayout() {
         name="map"
         options={{
           title: 'Carte',
-          tabBarIcon: ({ focused }) => <TabIcon name="map" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="map" focused={focused} equipe={isEquipe} />,
+          ...(isEquipe ? { tabBarItemStyle: styles.tabBarItemEquipeTab } : {}),
         }}
       />
 
@@ -112,7 +124,7 @@ export default function AppLayout() {
         options={{
           href: isEquipe ? null : undefined,
           title: 'Signalements',
-          tabBarIcon: ({ focused }) => <TabIcon name="alert-circle" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="alert-circle" focused={focused} equipe={isEquipe} />,
         }}
       />
       <Tabs.Screen
@@ -120,7 +132,8 @@ export default function AppLayout() {
         options={{
           href: isEquipe ? undefined : null,
           title: 'Missions',
-          tabBarIcon: ({ focused }) => <TabIcon name="construct" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="construct" focused={focused} equipe={isEquipe} />,
+          ...(isEquipe ? { tabBarItemStyle: styles.tabBarItemEquipeTab } : {}),
         }}
       />
 
@@ -129,7 +142,8 @@ export default function AppLayout() {
         name="report"
         options={{
           title: '',
-          tabBarButton: () => <PlusTabButton enabled={isAgent} />,
+          tabBarButton: () => <PlusTabButton enabled={isAgent} equipe={isEquipe} />,
+          ...(isEquipe ? { tabBarItemStyle: styles.tabBarItemEquipeSpacer } : {}),
         }}
       />
 
@@ -139,7 +153,7 @@ export default function AppLayout() {
         options={{
           href: isEquipe ? null : undefined,
           title: 'Citoyens',
-          tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-ellipses" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-ellipses" focused={focused} equipe={isEquipe} />,
         }}
       />
 
@@ -148,7 +162,8 @@ export default function AppLayout() {
         name="account"
         options={{
           title: 'Compte',
-          tabBarIcon: ({ focused }) => <TabIcon name="person-circle" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="person-circle" focused={focused} equipe={isEquipe} />,
+          ...(isEquipe ? { tabBarItemStyle: styles.tabBarItemEquipeTab } : {}),
         }}
       />
 
@@ -159,6 +174,7 @@ export default function AppLayout() {
 }
 
 const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 84 : 64;
+const TAB_BAR_HEIGHT_EQUIPE = Platform.OS === 'ios' ? 88 : 72;
 const PLUS_SIZE = 64;
 
 const styles = StyleSheet.create({
@@ -175,10 +191,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     elevation: 8,
   },
+  /** Onglets redistribués (4 pers. visibles) + labels un peu plus aérés */
+  tabBarEquipe: {
+    height: TAB_BAR_HEIGHT_EQUIPE,
+    paddingHorizontal: 14,
+    paddingTop: Platform.OS === 'ios' ? 8 : 6,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 6,
+  },
+  tabBarItemDefault: {
+    paddingTop: 6,
+  },
+  /** Équipe : 3 onglets utiles se partagent la largeur ; le « trou » du FAB est minimal. */
+  tabBarItemEquipeTab: {
+    flex: 1,
+    paddingTop: 4,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 50,
+  },
+  tabBarItemEquipeSpacer: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: 10,
+    minWidth: 10,
+    maxWidth: 10,
+    paddingHorizontal: 0,
+  },
   plusContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  plusContainerEquipe: {
+    justifyContent: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 4 : 2,
   },
   plusButton: {
     width: PLUS_SIZE,

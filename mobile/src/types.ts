@@ -9,7 +9,13 @@ export type Statut =
 
 export type Urgence = 'NORMAL' | 'URGENT';
 
-export type TypeInfrastructure = 'ROUTE' | 'ELECTRICITE' | 'EAU';
+export type TypeInfrastructure =
+  | 'ROUTE'
+  | 'ELECTRICITE_EAU'
+  | 'PROPRIETE_PUBLIQUE'
+  | 'SALUBRITE';
+
+export type TypeInfrastructureLegacy = TypeInfrastructure | 'ELECTRICITE' | 'EAU';
 
 export interface User {
   id: string;
@@ -26,7 +32,7 @@ export interface Ticket {
   photoSignalement: string;
   urgence: Urgence;
   statut: Statut;
-  typeInfrastructure: TypeInfrastructure;
+  typeInfrastructure: TypeInfrastructureLegacy;
   zoneId: string;
   localisation: { latitude: number; longitude: number };
   visiblePublic: boolean;
@@ -45,7 +51,7 @@ export interface Ticket {
 export interface SuggestionCitoyen {
   id: string;
   description: string;
-  typeSuggere: TypeInfrastructure;
+  typeSuggere: TypeInfrastructureLegacy;
   pseudoCitoyen?: string | null;
   traitee: boolean;
   zoneId: string;
@@ -56,6 +62,7 @@ export interface SuggestionCitoyen {
   instructionQg?: string | null;
   dispatchedAt?: string | null;
   patrolAssignee?: { id: string; nom: string; prenom: string; matricule?: string | null } | null;
+  photoCitoyen?: string | null;
   terrainClotureCode?: string | null;
   terrainClotureComment?: string | null;
 }
@@ -71,8 +78,8 @@ export interface GeoFeature {
     kind: 'ticket' | 'suggestion';
     statut?: Statut;
     urgence?: Urgence;
-    typeInfrastructure?: TypeInfrastructure;
-    typeSuggere?: TypeInfrastructure;
+    typeInfrastructure?: TypeInfrastructureLegacy;
+    typeSuggere?: TypeInfrastructureLegacy;
     zoneId?: string;
     visiblePublic?: boolean;
   };

@@ -109,19 +109,34 @@ export const api = {
 
   publicZones: () => request<{ zones: Zone[] }>('/api/public/zones', { token: null }),
 
-  publicSuggestion: (body: {
+  publicSuggestion: async (params: {
     description: string;
     typeSuggere: string;
     latitude: number;
     longitude: number;
-    zoneId: string;
     pseudoCitoyen?: string;
-  }) =>
-    request<{ suggestion: unknown }>('/api/public/suggestions', {
-      method: 'POST',
-      json: body,
-      token: null,
-    }),
+    photo?: File | null;
+  }) => {
+    const fd = new FormData();
+    fd.append('description', params.description);
+    fd.append('typeSuggere', params.typeSuggere);
+    fd.append('latitude', String(params.latitude));
+    fd.append('longitude', String(params.longitude));
+    if (params.pseudoCitoyen?.trim()) fd.append('pseudoCitoyen', params.pseudoCitoyen.trim());
+    if (params.photo) fd.append('photo', params.photo);
+    const res = await fetch(apiUrl('/api/public/suggestions'), { method: 'POST', body: fd });
+    const raw = await parseJson<{
+      suggestion?: unknown;
+      zoneAttribution?: { nom: string; code: string };
+      message?: string;
+      errors?: unknown;
+    }>(res);
+    if (!res.ok) {
+      const message = typeof raw.message === 'string' ? raw.message : null;
+      throw new Error(message || `Erreur ${res.status}`);
+    }
+    return raw as { suggestion: unknown; zoneAttribution?: { nom: string; code: string } };
+  },
 
   mapTiles: () => request<MapTilesPayload>('/api/map/tiles'),
 
@@ -216,6 +231,26 @@ export const api = {
   ) =>
     request<{ admin: AdminQg }>('/api/admin/qg-admins', {
       method: 'POST',
+      json: body,
+      adminToken: opts.adminToken ?? undefined,
+    }),
+
+  adminUpdateQgAdmin: (
+    id: string,
+    body: {
+      nom?: string;
+      prenom?: string;
+      email?: string;
+      password?: string;
+      numeroTelephone?: string;
+      matricule?: string | null;
+      zoneId?: string;
+      actif?: boolean;
+    },
+    opts: AdminOpts = {},
+  ) =>
+    request<{ admin: AdminQg }>(`/api/admin/qg-admins/${id}`, {
+      method: 'PATCH',
       json: body,
       adminToken: opts.adminToken ?? undefined,
     }),

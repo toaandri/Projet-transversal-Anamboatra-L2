@@ -230,14 +230,14 @@ function StoryMadagascarMapCard({ reducedMotion }: { reducedMotion: boolean }) {
         >
           <defs>
             <linearGradient id="storyMadaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(34, 211, 238, 0.35)" />
-              <stop offset="100%" stopColor="rgba(99, 102, 241, 0.38)" />
+              <stop offset="0%" stopColor="rgba(226, 232, 137, 0.55)" />
+              <stop offset="100%" stopColor="rgba(62, 96, 95, 0.42)" />
             </linearGradient>
           </defs>
           <path
             d={MADAGASCAR_PATH}
             fill="url(#storyMadaGrad)"
-            stroke="#38bdf8"
+            stroke="#3e605f"
             strokeWidth="0.8"
             strokeLinejoin="round"
           />
@@ -378,7 +378,7 @@ export function PublicLanding() {
             <h1 className="story-h1" data-anim="fade-up" data-delay="100">
               <span className="story-h1-line">Ils nous disent Anamboatra.</span>
               <span className="story-h1-line story-h1-grad story-gradient-flow">
-                Signalement, instruction, statuts — une carte, une vérité MTP
+                Signalement, instruction, statuts — une carte, une vérité assurée par le Ministère des Travaux Publics
               </span>
             </h1>
             <div className="story-cta-row" data-anim="fade-up" data-delay="400">

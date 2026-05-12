@@ -20,23 +20,24 @@ import type {
   Urgence,
   Zone,
 } from '../types';
+import { anam, statutUiColors, typeInfraColors } from '../anamboatraTheme';
 import { STATUT_LABELS, ticketMarkerStyle, suggestionMarkerStyle } from '../mapColors';
 
 const STATUT_COLORS: Record<Statut, string> = {
-  EN_ATTENTE_CONFIRMATION: '#dc2626',
-  REPARATION_PREVUE: '#f97316',
-  EN_REPARATION: '#3b82f6',
-  TERMINE: '#22c55e',
-  CLOTURE: '#16a34a',
+  EN_ATTENTE_CONFIRMATION: statutUiColors.EN_ATTENTE_CONFIRMATION,
+  REPARATION_PREVUE: statutUiColors.REPARATION_PREVUE,
+  EN_REPARATION: statutUiColors.EN_REPARATION,
+  TERMINE: statutUiColors.TERMINE,
+  CLOTURE: statutUiColors.CLOTURE,
 };
 
 const TYPE_COLORS: Record<TypeInfrastructureLegacy, string> = {
-  ROUTE: '#64748b',
-  ELECTRICITE_EAU: '#0e7490',
-  PROPRIETE_PUBLIQUE: '#7c3aed',
-  SALUBRITE: '#15803d',
-  ELECTRICITE: '#0e7490',
-  EAU: '#0e7490',
+  ROUTE: typeInfraColors.ROUTE as string,
+  ELECTRICITE_EAU: typeInfraColors.ELECTRICITE_EAU as string,
+  PROPRIETE_PUBLIQUE: typeInfraColors.PROPRIETE_PUBLIQUE as string,
+  SALUBRITE: typeInfraColors.SALUBRITE as string,
+  ELECTRICITE: typeInfraColors.ELECTRICITE as string,
+  EAU: typeInfraColors.EAU as string,
 };
 
 const TYPE_LABELS: Record<TypeInfrastructureLegacy, string> = {
@@ -262,18 +263,18 @@ export function MapView({
                 strokeColor="#ffffff"
                 strokeOpacity={0.85}
                 strokeWeight={4}
-                fillColor="#007e3a"
+                fillColor={anam.mgGreen}
                 fillOpacity={0.06}
                 clickable={false}
                 zIndex={1}
               />
-              {/* Liseré principal Anamboatra (vert) */}
+              {/* Liseré principal Anamboatra */}
               <Polygon
                 paths={zonePaths}
-                strokeColor="#007e3a"
+                strokeColor={anam.teal}
                 strokeOpacity={0.95}
                 strokeWeight={2.5}
-                fillColor="#007e3a"
+                fillColor={anam.mgGreen}
                 fillOpacity={0.08}
                 clickable={false}
                 zIndex={2}
@@ -407,9 +408,9 @@ function zoneCenterIcon(): google.maps.Icon | undefined {
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
     <radialGradient id="g" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#007e3a" stop-opacity="0.32"/>
-      <stop offset="60%" stop-color="#007e3a" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#007e3a" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#3e605f" stop-opacity="0.32"/>
+      <stop offset="60%" stop-color="#3e605f" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#3e605f" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="url(#g)"/>
@@ -549,7 +550,7 @@ function FeaturePopup({
         </button>
         <div className="anam-popup-body">
           <div className="anam-popup-eyebrow">
-            <span className="anam-popup-dot" style={{ background: '#a855f7' }} />
+            <span className="anam-popup-dot" style={{ background: anam.violet }} />
             Suggestion citoyenne
           </div>
           <div className="anam-popup-title">
@@ -576,7 +577,7 @@ function FeaturePopup({
 
   const statut = (p.statut || 'EN_ATTENTE_CONFIRMATION') as Statut;
   const statutColor = STATUT_COLORS[statut];
-  const typeColor = p.typeInfrastructure ? (TYPE_COLORS[p.typeInfrastructure] ?? '#64748b') : '#64748b';
+  const typeColor = p.typeInfrastructure ? (TYPE_COLORS[p.typeInfrastructure] ?? anam.teal) : anam.teal;
   const typeLabel = p.typeInfrastructure ? (TYPE_LABELS[p.typeInfrastructure] ?? 'Inconnu') : 'Inconnu';
   const photoApres =
     typeof p.photoCloture === 'string' && p.photoCloture.trim() ? p.photoCloture.trim() : '';

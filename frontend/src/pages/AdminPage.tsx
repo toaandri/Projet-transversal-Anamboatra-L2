@@ -21,6 +21,7 @@ import type {
   Zone,
 } from '../types';
 import { OrgEmailLocalField, fullOrgEmail, localPartFromInput } from '../components/OrgEmailLocalField';
+import { anam } from '../anamboatraTheme';
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
 const MADAGASCAR_BOUNDS = {
@@ -134,15 +135,6 @@ const REGION_LABELS: Record<RegionName, string> = {
   Toamasina: 'Toamasina (Tamatave)',
   Mahajanga: 'Mahajanga',
   Antsiranana: 'Antsiranana',
-};
-
-const REGION_ALIASES: Record<RegionName, string[]> = {
-  Antananarivo: ['antananarivo', 'tana'],
-  Fianarantsoa: ['fianarantsoa'],
-  Toliara: ['toliara', 'tulear', 'tulear'],
-  Toamasina: ['toamasina', 'tamatave'],
-  Mahajanga: ['mahajanga', 'majunga'],
-  Antsiranana: ['antsiranana', 'diego', 'diego suarez'],
 };
 
 function normalizeText(value: string): string {
@@ -1503,7 +1495,6 @@ function PolygonPicker({
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   /** Consultation carte : axe routier national (exclusif avec la commune sélectionnée). */
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   if (!apiKey) {
     return (
@@ -1596,18 +1587,9 @@ function PolygonPicker({
     [zones],
   );
   const filteredCommunes = useMemo(
-    () => {
-      const query = normalizeText(searchQuery);
-      return communeZones.filter((z) => {
-        if (regionFilter !== 'ALL' && z.region !== regionFilter) return false;
-        if (!query) return true;
-        const nom = normalizeText(z.nom);
-        if (nom.includes(query)) return true;
-        const regionAliases = REGION_ALIASES[z.region];
-        return regionAliases.some((alias) => alias.includes(query) || query.includes(alias));
-      });
-    },
-    [communeZones, regionFilter, searchQuery],
+    () =>
+      communeZones.filter((z) => regionFilter === 'ALL' || z.region === regionFilter),
+    [communeZones, regionFilter],
   );
   const selectedZoneVertices = useMemo(
     () => filteredCommunes.find((z) => z.id === selectedZoneId)?.vertices ?? null,
@@ -1650,17 +1632,9 @@ function PolygonPicker({
     setSelectedZoneId('');
   }, [filteredCommunes, selectedZoneId]);
   useEffect(() => {
-    const query = normalizeText(searchQuery);
-    if (!query) return;
-    const matchedRegion = (Object.entries(REGION_ALIASES) as [RegionName, string[]][])
-      .find(([, aliases]) => aliases.some((alias) => query.includes(alias)));
-    if (matchedRegion) setRegionFilter(matchedRegion[0]);
-  }, [searchQuery]);
-  useEffect(() => {
     if (!selectedZoneId) return;
     const selected = communeZones.find((z) => z.id === selectedZoneId);
     if (!selected) return;
-    setSearchQuery(selected.nom);
     setRegionFilter(selected.region);
   }, [selectedZoneId, communeZones]);
   const draftRegion = useMemo(() => inferRegionFromVertices(vertices), [vertices]);
@@ -1696,221 +1670,140 @@ function PolygonPicker({
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        height: '100%',
-        width: '100%',
-        padding: '12px',
-      }}
-    >
-      <div className="row">
-        <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          Fond de carte
-          <select
-            value={basemap}
-            onChange={(e) => setBasemap(e.target.value as MapBasemapId)}
-            style={{ minWidth: 170 }}
-          >
-            <option value="plan">Plan</option>
-            <option value="satellite">Satellite</option>
-          </select>
-        </label>
-        <div
-          className="admin-map-filters"
-        >
-          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Région
-            <select
-              value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value as 'ALL' | RegionName)}
-              style={{ minWidth: 170 }}
-            >
-              <option value="ALL">Toutes les régions</option>
-              <option value="Antananarivo">Antananarivo</option>
-              <option value="Fianarantsoa">Fianarantsoa</option>
-              <option value="Toliara">Toliara</option>
-              <option value="Toamasina">Toamasina (Tamatave)</option>
-              <option value="Mahajanga">Mahajanga</option>
-              <option value="Antsiranana">Antsiranana</option>
-            </select>
-          </label>
-          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Recherche
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Commune ou région"
-              list="commune-search-suggestions"
-              style={{ minWidth: 180 }}
-            />
-            <datalist id="commune-search-suggestions">
-              {communeZones.map((z) => (
-                <option key={`${z.id}-nom`} value={z.nom} />
-              ))}
-              {(Object.entries(REGION_ALIASES) as [RegionName, string[]][])
-                .flatMap(([, aliases]) => aliases)
-                .filter((alias, idx, arr) => arr.indexOf(alias) === idx)
-                .map((alias) => (
-                  <option key={`alias-${alias}`} value={alias} />
-                ))}
-            </datalist>
-          </label>
-          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Commune
-            <select
-              value={selectedZoneId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedZoneId(id);
-                if (id) setSelectedRouteId('');
-              }}
-              style={{ minWidth: 230 }}
-            >
-              <option value="">Commune de référence…</option>
-              {filteredCommunes.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.nom} ({REGION_LABELS[z.region]})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="small muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Route nationale
-            <select
-              value={selectedRouteId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedRouteId(id);
-                if (id) setSelectedZoneId('');
-              }}
-              style={{ minWidth: 230 }}
-            >
-              <option value="">Axe de référence…</option>
-              {routeZones.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.nom} ({z.code})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {interactionEnabled ? (
-          stage === 'pick' ? (
-            <button type="button" className="btn btn-primary" onClick={confirmLocation}>
-              Valider le point d’ancrage
-            </button>
-          ) : (
-            <>
-              <button type="button" className="btn btn-primary" disabled>
-                Délimitation — cliquer pour placer chaque sommet
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => onChange(vertices.slice(0, -1))}
-                disabled={vertices.length === 0}
-              >
-                Annuler le dernier sommet
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={resetLocation}>
-                Redéfinir le point d’ancrage
-              </button>
-            </>
-          )
-        ) : null}
-      </div>
-
-      {consultedZone ? (
-        <div
-          role="region"
-          aria-label="Détail du périmètre consulté"
-          style={{
-            padding: '12px 14px',
-            borderRadius: 12,
-            border: '1px solid rgba(15, 23, 42, 0.1)',
-            background: 'rgba(248, 250, 252, 0.98)',
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>{consultedZone.nom}</div>
-          <dl
-            style={{
-              margin: 0,
-              display: 'grid',
-              gap: '6px 16px',
-              gridTemplateColumns: 'auto 1fr',
-              fontSize: '0.88rem',
-              alignItems: 'baseline',
-            }}
-          >
-            <dt className="muted small" style={{ margin: 0 }}>
-              Type
-            </dt>
-            <dd style={{ margin: 0 }}>
-              {ZONE_TYPE_LABEL[consultedZone.type as TypeZone] || consultedZone.type}
-            </dd>
-            <dt className="muted small" style={{ margin: 0 }}>
-              Code
-            </dt>
-            <dd style={{ margin: 0 }}>{consultedZone.code}</dd>
-            {consultedCommuneRegion ? (
-              <>
-                <dt className="muted small" style={{ margin: 0 }}>
-                  Région (estim.)
-                </dt>
-                <dd style={{ margin: 0 }}>{REGION_LABELS[consultedCommuneRegion]}</dd>
-              </>
-            ) : null}
-            <dt className="muted small" style={{ margin: 0 }}>
-              Contact
-            </dt>
-            <dd style={{ margin: 0 }}>{consultedZone.numeroQg?.trim() || '—'}</dd>
-            <dt className="muted small" style={{ margin: 0 }}>
-              Géométrie
-            </dt>
-            <dd style={{ margin: 0 }}>
-              {consultedVerticesCount >= 3
-                ? `Polygone · ${consultedVerticesCount} sommets`
-                : consultedVerticesCount > 0
-                  ? `${consultedVerticesCount} point(s) — délimitation incomplète`
-                  : 'Non renseignée'}
-            </dd>
-          </dl>
-        </div>
-      ) : null}
-
-      {interactionEnabled ? (
-        stage === 'pick' ? (
-          <p className="muted small" style={{ margin: 0 }}>
-            Cliquer sur la carte pour positionner le centre, puis valider.
-          </p>
-        ) : (
-          <div style={{ display: 'grid', gap: 6 }}>
-            <p className="muted small" style={{ margin: 0 }}>
-              Sommets dans l’ordre de parcours — fermeture automatique du polygone.
-            </p>
-            {vertices.length >= 3 ? (
-              <p className="muted small" style={{ margin: 0 }}>
-                Région : <strong>{REGION_LABELS[draftRegion]}</strong>
-              </p>
-            ) : null}
-          </div>
-        )
-      ) : null}
+    <div className="admin-polygon-picker-root">
       <div
-        className={`map-wrap admin-zone-picker${
+        className={`admin-map-shell map-wrap admin-zone-picker${
           interactionEnabled && stage === 'delimit' ? ' draw-mode' : ''
         }`}
-        style={{
-          flex: '1 1 auto',
-          minHeight: 320,
-          borderRadius: 12,
-          overflow: 'hidden',
-          position: 'relative',
-        }}
       >
+        <div className="admin-map-toolbar" aria-label="Contrôles carte">
+          <div className="admin-map-toolbar-cluster">
+            <label className="admin-map-compact admin-map-compact--basemap">
+              <span className="admin-map-compact-label">Fond</span>
+              <select
+                value={basemap}
+                onChange={(e) => setBasemap(e.target.value as MapBasemapId)}
+                title="Fond de carte"
+                aria-label="Fond de carte"
+              >
+                <option value="plan">Plan</option>
+                <option value="satellite">Satellite</option>
+              </select>
+            </label>
+          </div>
+          <div className="admin-map-toolbar-cluster admin-map-filters">
+            <label className="admin-map-compact">
+              <span className="admin-map-compact-label">Région</span>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value as 'ALL' | RegionName)}
+                title="Filtrer par région administrative"
+              >
+                <option value="ALL">Toutes les régions</option>
+                <option value="Antananarivo">Antananarivo</option>
+                <option value="Fianarantsoa">Fianarantsoa</option>
+                <option value="Toliara">Toliara</option>
+                <option value="Toamasina">Toamasina (Tamatave)</option>
+                <option value="Mahajanga">Mahajanga</option>
+                <option value="Antsiranana">Antsiranana</option>
+              </select>
+            </label>
+            <label className="admin-map-compact">
+              <span className="admin-map-compact-label">Commune</span>
+              <select
+                value={selectedZoneId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedZoneId(id);
+                  if (id) setSelectedRouteId('');
+                }}
+                title="Commune de référence sur la carte"
+              >
+                <option value="">Commune…</option>
+                {filteredCommunes.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.nom} ({REGION_LABELS[z.region]})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="admin-map-compact">
+              <span className="admin-map-compact-label">Route nat.</span>
+              <select
+                value={selectedRouteId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedRouteId(id);
+                  if (id) setSelectedZoneId('');
+                }}
+                title="Axe routier national de référence"
+              >
+                <option value="">Axe…</option>
+                {routeZones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.nom} ({z.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {interactionEnabled ? (
+            <div className="admin-map-toolbar-cluster admin-map-toolbar-actions">
+              {stage === 'pick' ? (
+                <button type="button" className="btn btn-primary btn--map-toolbar" onClick={confirmLocation}>
+                  Valider l’ancrage
+                </button>
+              ) : (
+                <>
+                  <button type="button" className="btn btn-primary btn--map-toolbar" disabled>
+                    Délimitation active
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn--map-toolbar"
+                    onClick={() => onChange(vertices.slice(0, -1))}
+                    disabled={vertices.length === 0}
+                  >
+                    Annuler sommet
+                  </button>
+                  <button type="button" className="btn btn-ghost btn--map-toolbar" onClick={resetLocation}>
+                    Repositionner centre
+                  </button>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {consultedZone ? (
+          <div className="admin-map-consulted-card" role="region" aria-label="Détail du périmètre consulté">
+            <div className="admin-map-consulted-title">{consultedZone.nom}</div>
+            <dl className="admin-map-consulted-dl">
+              <dt className="muted small">Type</dt>
+              <dd>{ZONE_TYPE_LABEL[consultedZone.type as TypeZone] || consultedZone.type}</dd>
+              <dt className="muted small">Code</dt>
+              <dd>{consultedZone.code}</dd>
+              {consultedCommuneRegion ? (
+                <>
+                  <dt className="muted small">Région</dt>
+                  <dd>{REGION_LABELS[consultedCommuneRegion]}</dd>
+                </>
+              ) : null}
+              <dt className="muted small">Contact</dt>
+              <dd>{consultedZone.numeroQg?.trim() || '—'}</dd>
+              <dt className="muted small">Géom.</dt>
+              <dd>
+                {consultedVerticesCount >= 3
+                  ? `Polygone · ${consultedVerticesCount} sommets`
+                  : consultedVerticesCount > 0
+                    ? `${consultedVerticesCount} pt(s) — incomplet`
+                    : '—'}
+              </dd>
+            </dl>
+          </div>
+        ) : null}
+
+        <div className="admin-map-canvas">
       <APIProvider apiKey={apiKey}>
         <Map
           defaultCenter={TANA}
@@ -1942,10 +1835,10 @@ function PolygonPicker({
           {polygonPaths.length > 0 ? (
             <Polygon
               paths={polygonPaths}
-              strokeColor="#007e3a"
+              strokeColor={anam.teal}
               strokeOpacity={0.95}
               strokeWeight={3}
-              fillColor="#007e3a"
+              fillColor={anam.mgGreen}
               fillOpacity={0.22}
               clickable={false}
               zIndex={1}
@@ -1976,55 +1869,37 @@ function PolygonPicker({
           ) : null}
         </Map>
       </APIProvider>
-        {interactionEnabled ? (
-          <>
-            {/* Guide visuel : point au centre écran pendant le choix d’emplacement */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              {stage === 'pick' ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: '#1a73e8',
-                    border: '2px solid white',
-                    boxShadow: '0 0 0 2px rgba(0, 0, 0, 0.35)',
-                  }}
-                />
-              ) : null}
-              <div
-                className="muted small"
-                style={{
-                  position: 'absolute',
-                  bottom: 10,
-                  left: 10,
-                  background: 'rgba(255, 255, 255, 0.96)',
-                  border: '1px solid rgba(0, 0, 0, 0.08)',
-                  borderRadius: 999,
-                  padding: '6px 12px',
-                  color: '#202124',
-                  boxShadow: '0 2px 6px rgba(60, 64, 67, 0.18)',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                {stage === 'pick'
-                  ? pickedCenter
-                    ? 'Valider avant de poursuivre la délimitation'
-                    : 'Indiquer le centre sur la carte'
-                  : `${vertices.length} sommet${vertices.length > 1 ? 's' : ''}`}
-              </div>
-            </div>
-          </>
-        ) : null}
+      {interactionEnabled ? (
+        <div className="admin-map-pick-overlay">
+          {stage === 'pick' ? <div className="admin-map-pick-crosshair" aria-hidden /> : null}
+          <div className="admin-map-stage-pill muted small" role="status">
+            {stage === 'pick' ? (
+              <>
+                Centre sur la carte, puis valider.
+                <br />
+                <span className="admin-map-stage-pill-sub">
+                  {pickedCenter ? 'Valider l’ancrage pour tracer le polygone.' : 'Indiquer le centre sur la carte.'}
+                </span>
+              </>
+            ) : (
+              <>
+                Sommets dans l’ordre — fermeture auto du polygone.
+                {vertices.length >= 3 ? (
+                  <>
+                    {' '}
+                    · Région : <strong>{REGION_LABELS[draftRegion]}</strong>
+                  </>
+                ) : null}
+                <br />
+                <span className="admin-map-stage-pill-sub">
+                  {vertices.length} sommet{vertices.length > 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+        </div>
       </div>
     </div>
   );

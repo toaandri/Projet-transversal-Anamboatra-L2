@@ -5,6 +5,7 @@ import { MapView } from '../components/MapView';
 import { STATUT_LABELS } from '../mapColors';
 import type { GeoJsonFeature, Statut, TypeInfrastructure } from '../types';
 import { useMapSocket } from '../useMapSocket';
+import { anam, statutUiColors, typeInfraColors } from '../anamboatraTheme';
 
 const TYPE_LABELS: Record<string, string> = {
   ROUTE: 'Route',
@@ -15,20 +16,11 @@ const TYPE_LABELS: Record<string, string> = {
   EAU: 'Électricité / eau',
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  ROUTE: '#64748b',
-  ELECTRICITE_EAU: '#0e7490',
-  PROPRIETE_PUBLIQUE: '#7c3aed',
-  SALUBRITE: '#15803d',
-  ELECTRICITE: '#0e7490',
-  EAU: '#0e7490',
-};
-
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
-  { v: 'ROUTE', l: 'Route', color: TYPE_COLORS.ROUTE },
-  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: TYPE_COLORS.ELECTRICITE_EAU },
-  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: TYPE_COLORS.PROPRIETE_PUBLIQUE },
-  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: TYPE_COLORS.SALUBRITE },
+  { v: 'ROUTE', l: 'Route', color: typeInfraColors.ROUTE! },
+  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: typeInfraColors.ELECTRICITE_EAU! },
+  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: typeInfraColors.PROPRIETE_PUBLIQUE! },
+  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: typeInfraColors.SALUBRITE! },
 ];
 
 function truncateText(s: string, max: number): string {
@@ -38,11 +30,11 @@ function truncateText(s: string, max: number): string {
 }
 
 const STATUT_DOT: Partial<Record<Statut, string>> = {
-  EN_ATTENTE_CONFIRMATION: '#dc2626',
-  REPARATION_PREVUE: '#f97316',
-  EN_REPARATION: '#3b82f6',
-  TERMINE: '#22c55e',
-  CLOTURE: '#16a34a',
+  EN_ATTENTE_CONFIRMATION: statutUiColors.EN_ATTENTE_CONFIRMATION,
+  REPARATION_PREVUE: statutUiColors.REPARATION_PREVUE,
+  EN_REPARATION: statutUiColors.EN_REPARATION,
+  TERMINE: statutUiColors.TERMINE,
+  CLOTURE: statutUiColors.CLOTURE,
 };
 
 function initialCitizenSideOpen(): boolean {
@@ -273,7 +265,7 @@ export function PublicHome() {
                         <span
                           className="public-signalement-item-dot"
                           style={{
-                            background: STATUT_DOT[statut] || '#94a3b8',
+                            background: STATUT_DOT[statut] || anam.muted,
                           }}
                           aria-hidden
                         />

@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../useAuth';
 import { QgInterventionAgentsPanel, QgPatrolAgentsPanel } from '../components/EffectifsPanel';
+import { anam, anamRgba, typeInfraColors, statutUiColors } from '../anamboatraTheme';
 import { MapView } from '../components/MapView';
 import { STATUT_LABELS, ROLE_LABELS } from '../mapColors';
 import type {
@@ -28,10 +29,10 @@ const STATUTS_ORDER: Statut[] = [
 ];
 
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
-  { v: 'ROUTE', l: 'Route', color: '#64748b' },
-  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: '#0e7490' },
-  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: '#7c3aed' },
-  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: '#15803d' },
+  { v: 'ROUTE', l: 'Route', color: typeInfraColors.ROUTE! },
+  { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: typeInfraColors.ELECTRICITE_EAU! },
+  { v: 'PROPRIETE_PUBLIQUE', l: 'Propriété publique', color: typeInfraColors.PROPRIETE_PUBLIQUE! },
+  { v: 'SALUBRITE', l: 'Propreté (salubrité)', color: typeInfraColors.SALUBRITE! },
 ];
 
 const TYPE_META_BY_INFRASTRUCTURE = new Map<TypeInfrastructure, (typeof TYPES)[number]>(
@@ -39,16 +40,16 @@ const TYPE_META_BY_INFRASTRUCTURE = new Map<TypeInfrastructure, (typeof TYPES)[n
 );
 
 const STATUT_COLORS: Record<Statut, string> = {
-  EN_ATTENTE_CONFIRMATION: '#dc2626',
-  REPARATION_PREVUE: '#f97316',
-  EN_REPARATION: '#3b82f6',
-  TERMINE: '#22c55e',
-  CLOTURE: '#16a34a',
+  EN_ATTENTE_CONFIRMATION: statutUiColors.EN_ATTENTE_CONFIRMATION,
+  REPARATION_PREVUE: statutUiColors.REPARATION_PREVUE,
+  EN_REPARATION: statutUiColors.EN_REPARATION,
+  TERMINE: statutUiColors.TERMINE,
+  CLOTURE: statutUiColors.CLOTURE,
 };
 
 const URGENCE_COLORS: Record<Urgence, string> = {
-  NORMAL: '#94a3b8',
-  URGENT: '#dc2626',
+  NORMAL: anam.muted,
+  URGENT: anam.mgRed,
 };
 
 function canonicalInfrastructureType(v: string | undefined): TypeInfrastructure | undefined {
@@ -622,7 +623,7 @@ export function DashboardPage() {
                                 className="badge"
                                 style={{
                                   ['--chip-color' as string]:
-                                    typeMetaForInfrastructureField(t.typeInfrastructure)?.color || '#64748b',
+                                    typeMetaForInfrastructureField(t.typeInfrastructure)?.color || anam.teal,
                                 }}
                               >
                                 {typeMetaForInfrastructureField(t.typeInfrastructure)?.l ?? t.typeInfrastructure}
@@ -692,8 +693,11 @@ export function DashboardPage() {
             ) : (
               <div className="qg-empty">
                 <svg className="qg-empty-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <circle cx="20" cy="20" r="19" stroke="rgba(0,126,58,0.18)" strokeWidth="1.5" fill="rgba(0,126,58,0.04)"/>
-                  <path d="M20 11c-3.866 0-7 3.134-7 7 0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="rgba(0,126,58,0.35)"/>
+                  <circle cx="20" cy="20" r="19" stroke={anamRgba.tealStrokeSoft} strokeWidth="1.5" fill={anamRgba.tealFillSoft} />
+                  <path
+                    d="M20 11c-3.866 0-7 3.134-7 7 0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"
+                    fill={anamRgba.tealIcon}
+                  />
                 </svg>
                 <p className="muted small">
                   {mapVisible
@@ -734,15 +738,15 @@ export function DashboardPage() {
             {role === 'ADMIN_QG' && qgMenuPage === 'signalements' && tickets.length > 0 ? (
               <div className="map-stats-overlay">
                 <div className="map-stats-row">
-                  <span className="map-stat-dot" style={{ background: '#dc2626' }} />
+                  <span className="map-stat-dot map-stat-dot--attente" />
                   <span>{stats.attente} en attente de traitement</span>
                 </div>
                 <div className="map-stats-row">
-                  <span className="map-stat-dot" style={{ background: '#3b82f6' }} />
+                  <span className="map-stat-dot map-stat-dot--intervention" />
                   <span>{stats.enCours} en intervention</span>
                 </div>
                 <div className="map-stats-row">
-                  <span className="map-stat-dot" style={{ background: '#22c55e' }} />
+                  <span className="map-stat-dot map-stat-dot--clos" />
                   <span>{stats.termine} clôturés ou terminés</span>
                 </div>
               </div>
@@ -802,11 +806,11 @@ function SuggestionQgPanel({
       <div className="suggestion-qg-stripe" aria-hidden="true" />
       <div className="qg-section-meta suggestion-qg-eyebrow">Proposition citoyenne</div>
       <div className="suggestion-qg-head">
-        <span className="badge" style={{ ['--chip-color' as string]: '#a855f7' }}>
+        <span className="badge" style={{ ['--chip-color' as string]: anam.violet }}>
           {typeLabel}
         </span>
         {suggestion.traitee ? (
-          <span className="badge" style={{ ['--chip-color' as string]: '#16a34a' }}>
+          <span className="badge" style={{ ['--chip-color' as string]: statutUiColors.TERMINE }}>
             Traitée
           </span>
         ) : (
@@ -1155,10 +1159,10 @@ function MobileOnlyScreen({
         <div className="panel mobile-only-card">
           <div className="mobile-only-icon" aria-hidden="true">
             <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width:56,height:56}}>
-              <rect x="14" y="4" width="28" height="48" rx="5" stroke="#007e3a" strokeWidth="2.2" fill="rgba(0,126,58,0.06)"/>
-              <rect x="22" y="8" width="12" height="2" rx="1" fill="#007e3a" opacity="0.4"/>
-              <circle cx="28" cy="44" r="2.5" fill="#007e3a" opacity="0.5"/>
-              <path d="M24 22l4 4 8-8" stroke="#007e3a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="14" y="4" width="28" height="48" rx="5" stroke="#3e605f" strokeWidth="2.2" fill="rgba(62,96,95,0.08)"/>
+              <rect x="22" y="8" width="12" height="2" rx="1" fill="#3e605f" opacity="0.4"/>
+              <circle cx="28" cy="44" r="2.5" fill="#3e605f" opacity="0.5"/>
+              <path d="M24 22l4 4 8-8" stroke="#3e605f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <h1>Application web non disponible pour ce profil</h1>

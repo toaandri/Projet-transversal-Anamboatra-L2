@@ -1,25 +1,30 @@
+import { anam } from './anamboatraTheme';
 import type { Role, Statut, Urgence } from './types';
 
 export function ticketMarkerStyle(statut: Statut, urgence: Urgence, viewerRole: Role | null) {
   const base = { weight: 2, opacity: 1, fillOpacity: 0.85 };
   switch (statut) {
     case 'EN_ATTENTE_CONFIRMATION':
-      if (viewerRole === 'ADMIN_QG') return { ...base, color: '#991b1b', fillColor: '#dc2626' };
-      return { ...base, color: '#4b5563', fillColor: '#9ca3af' };
+      if (viewerRole === 'ADMIN_QG') return { ...base, color: '#7f1d1d', fillColor: anam.mgRed };
+      return { ...base, color: anam.tealDark, fillColor: anam.sageDeep };
     case 'REPARATION_PREVUE':
-      return { ...base, color: '#c2410c', fillColor: '#f97316' };
+      return { ...base, color: anam.amberDeep, fillColor: anam.amber };
     case 'EN_REPARATION':
-      return { ...base, color: '#1e40af', fillColor: '#3b82f6' };
+      return { ...base, color: '#1e3a5f', fillColor: anam.blue };
     case 'TERMINE':
     case 'CLOTURE':
-      return { ...base, color: '#166534', fillColor: '#22c55e' };
+      return { ...base, color: anam.mgGreenDeep, fillColor: anam.mgGreen };
     default:
-      return { ...base, color: '#64748b', fillColor: urgence === 'URGENT' ? '#ef4444' : '#f59e0b' };
+      return {
+        ...base,
+        color: anam.teal,
+        fillColor: urgence === 'URGENT' ? anam.mgRed : anam.amber,
+      };
   }
 }
 
 export function suggestionMarkerStyle() {
-  return { weight: 2, color: '#6b21a8', fillColor: '#a855f7', opacity: 1, fillOpacity: 0.9 };
+  return { weight: 2, color: anam.tealDark, fillColor: anam.lime, opacity: 1, fillOpacity: 0.92 };
 }
 
 export const STATUT_LABELS: Record<Statut, string> = {

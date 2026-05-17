@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { OrgEmailLocalField, fullOrgEmail } from '../components/OrgEmailLocalField';
-import { useAuth } from '../useAuth';
+import { OrgEmailLocalField, fullOrgEmail } from '@/components/OrgEmailLocalField';
+import { useAuth } from '@/auth/useAuth';
 
 export function LoginPage() {
   const { login } = useAuth();

@@ -10,16 +10,12 @@ const statutsPublics = Object.freeze([
   StatutEnum.TERMINE,
   StatutEnum.CLOTURE,
 ]);
-/** Même ensemble que `statutsPublics` — accès O(1) si besoin de contrôles métier côté JS. */
 const statutsPublicsSet = Object.freeze(new Set(statutsPublics));
 
 const ROLES_WITH_ZONE_ONLY_TICKET_VISIBILITY = Object.freeze(
   new Set([RoleEnum.AGENT_PATROUILLE, RoleEnum.ADMIN_QG]),
 );
 
-/**
- * Tickets « vitrine » : tous les dossiers publics approuvés, visible à l’échelle nationale.
- */
 function publicTicketsNationalWhere() {
   return {
     visiblePublic: true,
@@ -27,9 +23,6 @@ function publicTicketsNationalWhere() {
   };
 }
 
-/**
- * Filtre optionnel par commune (ex. API `?zoneId=`) — même règle métier que la vitrine, mais localisé.
- */
 function publicTicketsInZoneWhere(mapScopeZoneId) {
   if (!mapScopeZoneId) {
     return { id: { [Op.in]: [] } };
@@ -41,7 +34,6 @@ function publicTicketsInZoneWhere(mapScopeZoneId) {
   };
 }
 
-/** Filtre Sequelize pour les tickets visibles selon le rôle (remplace l’ancien filtre Mongo). */
 function ticketVisibilityWhere(principal) {
   if (!principal || principal.type === MapRole.PUBLIC) {
     return publicTicketsNationalWhere();
@@ -106,11 +98,6 @@ function layersMeta(principal) {
   return base;
 }
 
-/**
- * Pour QG / patrouille / équipe d’intervention : après filtre zoneId, on restreint aux points
- * dont les coordonnées tombent dans le polygone officiel de la zone (évite d’afficher un
- * dossier mal rattaché).
- */
 async function zoneGeometryFilterFn(principal) {
   if (!principal || principal.type === MapRole.PUBLIC) return null;
   if (

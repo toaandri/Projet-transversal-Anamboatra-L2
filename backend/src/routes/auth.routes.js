@@ -7,19 +7,6 @@ const { RoleEnum } = require('../constants/enums');
 
 const router = express.Router();
 
-/**
- * Verrou appareil unique (device binding) — DÉSACTIVÉ.
- *
- * Le projet n'étant pas en phase de déploiement, cette contrainte créait
- * uniquement des frictions de test (impossible de se connecter depuis un
- * second téléphone, login bloqué pour les rôles AGENT_PATROUILLE /
- * EQUIPE_INTERVENTION qui n'envoient pas de deviceId). On garde le champ
- * `appareilUnique` en base et les endpoints de reset (qui deviennent des
- * no-ops fonctionnels) pour pouvoir réactiver le mécanisme plus tard sans
- * migration destructive.
- *
- * Pour le réactiver : repeupler ce Set avec les rôles concernés.
- */
 const DEVICE_BOUND_ROLES = new Set();
 
 router.post(
@@ -54,7 +41,7 @@ router.post(
         });
       }
       if (!user.appareilUnique) {
-        // Premier login : on scelle l'appareil à ce compte
+
         await user.update({ appareilUnique: deviceId });
       } else if (user.appareilUnique !== deviceId) {
         return res.status(403).json({

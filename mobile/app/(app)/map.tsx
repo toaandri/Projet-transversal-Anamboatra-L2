@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 
-
 const ZONE_CHIP_ANIM = LayoutAnimation.create(
   220,
   LayoutAnimation.Types.easeInEaseOut,
@@ -29,17 +28,17 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../src/AuthContext';
-import { api } from '../../src/api';
-import { connectMapSocket } from '../../src/socket';
+import { useAuth } from '@/auth/AuthContext';
+import { api } from '@/lib/api';
+import { connectMapSocket } from '@/lib/socket';
 import {
   colors,
   markerColorForFeature,
   ROLE_LABELS,
   STATUT_LABELS,
   TYPE_LABELS,
-} from '../../src/theme';
-import type { GeoFeature, Zone } from '../../src/types';
+} from '@/theme/theme';
+import type { GeoFeature, Zone } from '@/lib/types';
 
 const TANA: Region = {
   latitude: -18.8792,
@@ -170,7 +169,6 @@ export default function MapScreen() {
     };
   }, [user]);
 
-  // Centrage automatique sur la commune au premier chargement.
   useEffect(() => {
     if (initiallyCenteredRef.current) return;
     if (!zoneCoords || !mapRef.current) return;
@@ -198,23 +196,21 @@ export default function MapScreen() {
 
   function handleZoneChipPress() {
     if (zoneChipOpen) {
-      // 2e tap quand déplié → centre la carte sur la commune
+
       recenterOnZone();
     } else {
-      // 1er tap → on déplie (transition animée)
+
       LayoutAnimation.configureNext(ZONE_CHIP_ANIM);
       setZoneChipOpen(true);
     }
     scheduleCollapse();
   }
 
-  // Nettoyage du timer si on quitte l'écran.
   useEffect(() => {
     return () => {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
     };
   }, []);
-
 
   async function sendCurrentPosition() {
     setPosSending(true);
@@ -238,7 +234,6 @@ export default function MapScreen() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
       <View style={styles.container}>
-        {/* Bandeau d'identité + actions */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
             <View style={styles.brandLogo}>
@@ -326,8 +321,6 @@ export default function MapScreen() {
             </View>
           ) : null}
 
-          {/* Fiche popup quand on tape un pin — rendue hors MapView pour
-              éviter les bugs de touch Android avec Callout tooltip */}
           {selectedFeature ? (() => {
             const f = selectedFeature;
             const color = markerColorForFeature(f.properties);
@@ -343,7 +336,6 @@ export default function MapScreen() {
               : `${STATUT_LABELS[statutKey]} · ${TYPE_LABELS[typeKey]}`;
             return (
               <View style={styles.pinPopupWrap}>
-                {/* Overlay transparent pour fermer la fiche en cliquant en dehors */}
                 <TouchableOpacity
                   style={StyleSheet.absoluteFillObject}
                   activeOpacity={1}
@@ -376,7 +368,6 @@ export default function MapScreen() {
             );
           })() : null}
 
-          {/* Switch type carte (vue plan / hybride) */}
           <View style={styles.mapTypeSwitch}>
             <TouchableOpacity
               style={[styles.mapTypeBtn, mapType === 'hybrid' && styles.mapTypeBtnOn]}
@@ -398,11 +389,6 @@ export default function MapScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Pastille "Ma commune" :
-              - fermée → cercle vert avec icône cible
-              - ouverte (1er tap) → pastille avec nom de la commune
-              - 2e tap quand ouverte → recentre la carte sur la commune
-              - se replie automatiquement après quelques secondes d'inactivité */}
           {zone ? (
             <TouchableOpacity
               style={zoneChipOpen ? styles.zoneChip : styles.zoneChipCollapsed}
@@ -424,7 +410,6 @@ export default function MapScreen() {
             </TouchableOpacity>
           ) : null}
 
-          {/* FABs secondaires (le « + Signaler » est désormais le bouton central de la tab bar) */}
           <View style={styles.fabRow}>
             {isEquipe ? (
               <TouchableOpacity
@@ -613,7 +598,6 @@ const styles = StyleSheet.create({
   },
   zonePinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.white },
 
-  // ---- Marqueur custom (goutte colorée) ----
   pinWrap: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -653,11 +637,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  // ---- Popup fiche (hors MapView, pas de Callout) ----
   pinPopupWrap: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
-    paddingBottom: 90, // au-dessus de la tab bar
+    paddingBottom: 90,
   },
   pinPopup: {
     marginHorizontal: 16,

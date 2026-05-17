@@ -8,7 +8,6 @@ const { findArrondissementZoneForCoordinates } = require('../utils/zoneResolve')
 
 const router = express.Router();
 
-/** Liste des zones (sélection citoyenne pour suggestion géolocalisée). */
 router.get('/zones', async (_req, res) => {
   const zones = await Zone.findAll({
     attributes: ['id', 'nom', 'type', 'code'],
@@ -17,7 +16,6 @@ router.get('/zones', async (_req, res) => {
   return res.json({ zones });
 });
 
-/** Tickets « vitrine » nationaux ; `?zoneId=` restreint à une commune si besoin. */
 router.get('/tickets', async (req, res) => {
   const mapScopeZoneId = mapScopeZoneIdFromQuery(req.query.zoneId);
   const tickets = await Ticket.findAll({

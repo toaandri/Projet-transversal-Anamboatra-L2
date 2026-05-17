@@ -1,17 +1,3 @@
-/**
- * CDC v2.3 — base vide + compte SUPER_ADMIN unique.
- *
- * Ce script est idempotent : il (re)crée le compte super-admin si besoin
- * mais n'amorce aucune zone ni aucun autre utilisateur. Toute la configuration
- * du territoire (zones, dépôts, agents de réparation, admins QG) se fait
- * ensuite depuis la Console super-admin côté front.
- *
- * Compte amorcé :
- *   email     : admin@anamboatra.mg
- *   mot passe : admin1234
- *
- * Exécuter :  npm run seed
- */
 require('dotenv').config();
 
 const { connectPostgres } = require('../config/postgres');
@@ -48,9 +34,7 @@ async function seed() {
   });
 
   if (!created) {
-    // On ne réinitialise PAS le mot de passe si le compte existe déjà,
-    // pour ne pas écraser un mot de passe changé en prod. On s'assure
-    // simplement que le compte reste actif et bien rôle SUPER_ADMIN.
+
     await admin.update({
       role: RoleEnum.SUPER_ADMIN,
       actif: true,

@@ -28,7 +28,7 @@ async function main() {
       socket.data.userId = user?.id;
       socket.data.role = user?.role;
     } catch {
-      // anonyme ou jeton invalide
+
     }
     return next();
   });
@@ -37,8 +37,6 @@ async function main() {
 
   app.set('io', io);
 
-  // Bind sur 0.0.0.0 pour que le téléphone (Expo Go) sur le même Wi-Fi
-  // puisse joindre l'API via l'IP LAN du PC.
   server.listen(env.port, '0.0.0.0', () => {
     console.log(`[anamboatra] API + WebSocket à l'écoute sur 0.0.0.0:${env.port}`);
   });

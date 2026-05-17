@@ -1,12 +1,5 @@
 const { env } = require('../config/env');
 
-/**
- * CDC v2.2 — garde les endpoints de la console d'administration technique.
- * L'admin n'est pas un acteur métier (hors UML) : un simple jeton partagé
- * suffit, provisionné côté env (ADMIN_SETUP_TOKEN).
- *
- * Comparaison en temps constant pour éviter les attaques par timing.
- */
 function timingSafeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
   if (a.length !== b.length) return false;

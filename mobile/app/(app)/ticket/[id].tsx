@@ -16,12 +16,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../../src/api';
-import { resolveAssetUrl } from '../../../src/config';
-import { useAuth } from '../../../src/AuthContext';
-import { OsrmRouteModal } from '../../../src/OsrmRouteModal';
-import { colors, STATUT_COLORS, STATUT_LABELS, TYPE_COLORS, TYPE_LABELS } from '../../../src/theme';
-import type { Ticket } from '../../../src/types';
+import { api } from '@/lib/api';
+import { resolveAssetUrl } from '@/lib/config';
+import { useAuth } from '@/auth/AuthContext';
+import { OsrmRouteModal } from '@/components/OsrmRouteModal';
+import { colors, STATUT_COLORS, STATUT_LABELS, TYPE_COLORS, TYPE_LABELS } from '@/theme/theme';
+import type { Ticket } from '@/lib/types';
 
 export default function TicketDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();

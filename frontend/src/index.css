@@ -1,5 +1,5 @@
 :root {
-  /* Design system Anamboatra — aligné PublicLanding (.story-page) */
+  
   --anam-sage: #d0d9d4;
   --anam-sage-deep: #b9c4be;
   --anam-teal: #3e605f;
@@ -72,11 +72,6 @@ code {
   flex-direction: column;
 }
 
-/* ------------------------------------------------------------------ */
-/* Landing "Ministère des Travaux Publics" — vitrine institutionnelle  */
-/* Mode clair, halos pastel animés, typewriter, responsive complet.    */
-/* Tout est scopé sous .landing-page pour ne pas polluer l'app.        */
-/* ------------------------------------------------------------------ */
 .landing-page {
   position: relative;
   min-height: 100vh;
@@ -86,7 +81,6 @@ code {
   overflow-x: hidden;
 }
 
-/* Fond animé : couches de gradients qui dérivent + 4 halos qui traversent */
 .landing-bg {
   position: fixed;
   inset: 0;
@@ -161,7 +155,6 @@ code {
   animation: landingOrbD 50s ease-in-out infinite;
 }
 
-/* Trajectoires larges → les couleurs traversent vraiment l'écran */
 @keyframes landingOrbA {
   0% {
     transform: translate(-20vw, -20vh);
@@ -225,7 +218,6 @@ code {
   }
 }
 
-/* Bandeau gouvernemental officiel */
 .landing-gov-bar {
   position: relative;
   z-index: 6;
@@ -291,7 +283,6 @@ code {
   text-transform: uppercase;
 }
 
-/* Barre de navigation principale */
 .landing-page .landing-nav {
   position: relative;
   z-index: 5;
@@ -314,7 +305,6 @@ code {
   font-weight: 600;
 }
 
-/* Marque "pin drop" type Google Maps avec accent drapeau Madagascar */
 .landing-mark {
   width: 38px;
   height: 38px;
@@ -417,7 +407,6 @@ code {
   z-index: 1;
 }
 
-/* Hero plein écran — 2 colonnes sur desktop : texte + mini-carte Madagascar */
 .landing-hero {
   min-height: calc(100vh - 130px);
   display: grid;
@@ -441,7 +430,6 @@ code {
   }
 }
 
-/* ----------------------------- Mini-carte Madagascar (live preview) ---------- */
 .landing-hero-preview {
   display: grid;
   place-items: center;
@@ -485,7 +473,6 @@ code {
   overflow: hidden;
 }
 
-/* Ligne de scan horizontale type radar GMaps satellite */
 .landing-mapPreview-scan {
   position: absolute;
   inset: 0;
@@ -512,7 +499,6 @@ code {
   }
 }
 
-/* Pins SVG (in-place dans le contour de Madagascar) + radar pulse */
 .landing-mapPin-radarSvg {
   transform-origin: center;
   transform-box: fill-box;
@@ -534,7 +520,6 @@ code {
   }
 }
 
-/* Badge "LIVE" en haut-gauche, type GMaps controls */
 .landing-mapPreview-badge {
   position: absolute;
   top: 14px;
@@ -745,7 +730,6 @@ code {
   font-size: 0.85rem;
 }
 
-/* Section "Nos missions" */
 .landing-pillars {
   padding: clamp(4vh, 8vh, 110px) clamp(1rem, 8vw, 6rem);
   max-width: 1200px;
@@ -822,7 +806,6 @@ code {
   line-height: 1.55;
 }
 
-/* Bande CTA finale */
 .landing-band {
   text-align: center;
   padding: clamp(6vh, 10vh, 120px) clamp(1rem, 8vw, 6rem);
@@ -851,7 +834,6 @@ code {
   max-width: 520px;
 }
 
-/* ----------------------------- Sections au scroll ----------------------------- */
 .landing-progress {
   position: fixed;
   top: 0;
@@ -925,7 +907,6 @@ code {
   margin: 14px 0 0;
 }
 
-/* Reveal au scroll — fluide, cubic-bezier doux */
 [data-reveal] {
   opacity: 0;
   transform: translateY(28px);
@@ -955,7 +936,6 @@ code {
   transition-delay: 0.5s;
 }
 
-/* ----------------------------- Cards 3 / 4 ----------------------------- */
 .landing-cards-3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1008,7 +988,6 @@ code {
   font-size: 0.95rem;
 }
 
-/* ----------------------------- Citation manifeste ----------------------------- */
 .landing-section-quote {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(11, 61, 145, 0.04) 100%);
   border-top: 1px solid rgba(11, 61, 145, 0.08);
@@ -1105,7 +1084,6 @@ code {
   margin: 28px auto 0;
 }
 
-/* ----------------------------- Cards rôle ----------------------------- */
 .landing-roleCard {
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(11, 61, 145, 0.1);
@@ -1175,7 +1153,6 @@ code {
   line-height: 1.55;
 }
 
-/* ----------------------------- Cycle de vie ----------------------------- */
 .landing-section-cycle {
   background: linear-gradient(180deg, rgba(11, 61, 145, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
 }
@@ -1273,7 +1250,6 @@ code {
   line-height: 1.5;
 }
 
-/* ----------------------------- Trust cards ----------------------------- */
 .landing-trustCard {
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(11, 61, 145, 0.1);
@@ -1317,7 +1293,6 @@ code {
   line-height: 1.6;
 }
 
-/* ----------------------------- Pledges (engagements chiffrés) ----------------------------- */
 .landing-section-pledges {
   background: linear-gradient(180deg, rgba(11, 61, 145, 0.04) 0%, rgba(11, 61, 145, 0.08) 100%);
 }
@@ -1370,7 +1345,6 @@ code {
   line-height: 1.5;
 }
 
-/* ----------------------------- Étapes citoyen ----------------------------- */
 .landing-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1420,7 +1394,6 @@ code {
   line-height: 1.55;
 }
 
-/* ----------------------------- Culture malgache ----------------------------- */
 .landing-section-mada {
   background: linear-gradient(180deg, rgba(252, 235, 217, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
 }
@@ -1494,7 +1467,6 @@ code {
   line-height: 1.6;
 }
 
-/* Marquee infinie de villes (style GMaps locator) */
 .landing-marquee {
   margin-top: 44px;
   overflow: hidden;
@@ -1605,7 +1577,6 @@ code {
   }
 }
 
-/* Pied de page institutionnel */
 .landing-foot {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1629,7 +1600,6 @@ code {
   font-weight: 600;
 }
 
-/* Responsive : tablette + mobile */
 @media (max-width: 960px) {
   .landing-gov-bar {
     padding: 7px 18px;
@@ -1682,7 +1652,6 @@ code {
   }
 }
 
-/* Cycle stepper : 5 colonnes sur desktop, vertical en dessous */
 @media (max-width: 960px) {
   .landing-cycle {
     grid-template-columns: 1fr;
@@ -1740,7 +1709,6 @@ code {
   }
 }
 
-/* Mode "Google Maps" — carte + centre de contrôle sur un seul écran (grille) */
 .page.dashboard {
   position: relative;
   height: 100dvh;
@@ -1755,13 +1723,10 @@ code {
     var(--bg);
 }
 
-/* Le topbar standard est caché : son contenu est repris dans le panneau
-   et dans une pilule flottante en haut à droite */
 .page.dashboard > .topbar {
   display: none;
 }
 
-/* Pilule flottante en haut à droite : actions globales (portail / logout) */
 .dashboard .top-actions {
   position: absolute;
   top: 12px;
@@ -2079,9 +2044,6 @@ textarea {
   padding: 0.65rem;
 }
 
-/* ------------------------------------------------------------------ */
-/* Dashboard : carte + centre de contrôle — même écran, grille unifiée  */
-/* ------------------------------------------------------------------ */
 .dashboard .dash-grid {
   --dash-pad: 12px;
   --dash-gap: 12px;
@@ -2105,7 +2067,6 @@ textarea {
   column-gap: 0;
 }
 
-/* Panneau seul : pas de carte (QG / super-admin) */
 .dashboard .dash-grid.map-hidden {
   grid-template-columns: minmax(0, 1fr);
   column-gap: 0;
@@ -2218,7 +2179,6 @@ textarea {
   overflow: hidden;
 }
 
-/* Chevron entre panneau et carte */
 .dashboard .side-toggle {
   position: absolute;
   top: 50%;
@@ -2253,7 +2213,6 @@ textarea {
   color: var(--anam-ink);
 }
 
-/* Mode tracage zone (admin): curseur croix — shell ou map-wrap */
 .dashboard .map-wrap.admin-zone-picker.draw-mode,
 .dashboard .map-wrap.admin-zone-picker.draw-mode .gm-style,
 .dashboard .map-wrap.admin-zone-picker.draw-mode .gm-style div,
@@ -2262,7 +2221,7 @@ textarea {
 .dashboard .admin-map-shell.map-wrap.admin-zone-picker.draw-mode .gm-style div {
   cursor: crosshair !important;
 }
-/* En-tête à l'intérieur du panneau (brand + sous-titre) — remplace l'ancien topbar */
+
 .dashboard .side-header {
   display: flex;
   align-items: center;
@@ -2387,9 +2346,6 @@ textarea {
   min-width: 130px;
 }
 
-/* ------------------------------------------------------------------
-   Admin · sélecteur de polygone : contrôles flottants discrets (carte)
-   ------------------------------------------------------------------ */
 .dashboard .admin-polygon-picker-root {
   display: flex;
   flex-direction: column;
@@ -2608,7 +2564,6 @@ textarea {
   color: var(--anam-ink);
 }
 
-/* Thème panneau latéral & bulles — aligné variables :root (Anamboatra) */
 .dashboard .side,
 .bubble-card {
   --text: var(--anam-ink);
@@ -2824,10 +2779,6 @@ textarea {
   }
 }
 
-/* ------------------------------------------------------------
-   Portrait 9:16 support (mobile/tablette en vertical):
-   tout l'IHM admin reste atteignable sans élément masqué.
-   ------------------------------------------------------------ */
 @media (max-aspect-ratio: 9/16) {
   .page.dashboard {
     height: auto;
@@ -2975,10 +2926,6 @@ textarea {
   }
 }
 
-/* ------------------------------------------------------------------
-   Carte publique citoyenne : mobile / tablette étroite = carte plein
-   écran ; formulaire en tiroir, bouton « Menu » toujours visible.
-   ------------------------------------------------------------------ */
 .page.dashboard.dashboard--public-carto .side-toggle-label {
   display: none;
 }
@@ -3118,7 +3065,6 @@ textarea {
   }
 }
 
-/* Carte publique (/travaux) — fond identique :root ; dégradés locaux seulement */
 .page.dashboard.dashboard--public-carto {
   background:
     radial-gradient(ellipse 110% 75% at 0% 0%, rgba(255, 255, 255, 0.55) 0%, transparent 52%),
@@ -3212,7 +3158,6 @@ textarea {
     var(--bg);
 }
 
-/* Écran "mobile uniquement" pour les agents terrain qui se connectent au web */
 .mobile-only-main {
   flex: 1;
   display: flex;
@@ -3243,7 +3188,6 @@ textarea {
   gap: 0.25rem;
 }
 
-/* Bulle style messenger pour le formulaire "Nouvelle zone" (white mode) */
 .bubble-card {
   position: relative;
   border-radius: 18px;
@@ -3510,11 +3454,6 @@ textarea {
   color: #4b5563;
 }
 
-/* ------------------------------------------------------------------ */
-/* Thème QG — sauge / teal / citron (aligné PublicLanding)              */
-/* ------------------------------------------------------------------ */
-
-/* Header du panneau latéral : tricolore Madagascar + liserés teal */
 .dashboard .side-header {
   position: relative;
   padding: 14px 4px 14px 4px;
@@ -3623,12 +3562,10 @@ textarea {
   margin-top: 2px;
 }
 
-/* Masquer le logo générique si le bloc drapeau QG (.qg-mark) est présent */
 .dashboard .side-header:has(.qg-mark) .logo {
   display: none;
 }
 
-/* Pilule flottante des actions */
 .dashboard .top-actions {
   border: 1px solid var(--border);
   border-top: 2px solid #c8102e;
@@ -3644,7 +3581,6 @@ textarea {
   color: var(--accent2);
 }
 
-/* Boutons primary panneau QG — même primaire que la landing (citron / encre) */
 .dashboard .side .btn-primary,
 .dashboard .bubble-card .btn-primary {
   background: linear-gradient(180deg, #eef2c4 0%, #e2e889 40%, #d4da7a 100%);
@@ -3659,7 +3595,6 @@ textarea {
   box-shadow: 0 8px 20px rgba(26, 36, 34, 0.14);
 }
 
-/* Boutons ghost : teal institutionnel */
 .dashboard .side .btn-ghost,
 .dashboard .bubble-card .btn-ghost {
   color: var(--accent2);
@@ -3671,7 +3606,6 @@ textarea {
   color: var(--anam-ink);
 }
 
-/* Chips actives */
 .dashboard .side .chip.on,
 .dashboard .bubble-card .chip.on {
   border-color: var(--accent);
@@ -3679,7 +3613,6 @@ textarea {
   background: var(--accentSoft);
 }
 
-/* Focus inputs */
 .dashboard .side input:focus,
 .dashboard .side select:focus,
 .dashboard .side textarea:focus,
@@ -3690,7 +3623,6 @@ textarea {
   box-shadow: 0 0 0 3px rgba(62, 96, 95, 0.2);
 }
 
-/* Cartes ticket Kanban */
 .dashboard .ticket-card:hover {
   border-color: var(--accent);
   background: rgba(226, 232, 137, 0.18);
@@ -3752,7 +3684,6 @@ textarea {
   background: rgba(62, 96, 95, 0.45);
 }
 
-/* Mobile : on garde l'esprit (liserés tricolores au-dessus du panneau replié) */
 @media (max-width: 900px) {
   .dashboard .side-header {
     display: flex;
@@ -3766,12 +3697,6 @@ textarea {
     border-top-width: 1px;
   }
 }
-
-/* ============================================================
-   QG Side panel — sections structurées (filtres, terrain,
-   effectifs, kanban, détail). Hiérarchie typographique claire,
-   séparateurs subtils, chips lisibles avec pastille colorée.
-   ============================================================ */
 
 .dashboard .side {
   padding: 14px 14px 18px;
@@ -3797,7 +3722,6 @@ textarea {
   padding-bottom: 8px;
 }
 
-/* --- Navigation QG (pages Signalements / Patrouille / Intervention) --------- */
 .dashboard .qg-nav {
   display: flex;
   flex-direction: column;
@@ -4024,7 +3948,6 @@ textarea {
   border-bottom-color: var(--accent);
 }
 
-/* --- Filtres ---------------------------------------------- */
 .dashboard .qg-filter + .qg-filter {
   margin-top: 4px;
 }
@@ -4082,7 +4005,6 @@ textarea {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-color, var(--accent)) 22%, #ffffff) inset;
 }
 
-/* --- Actions terrain ------------------------------------- */
 .dashboard .qg-actions {
   display: flex;
   flex-direction: column;
@@ -4094,7 +4016,6 @@ textarea {
   justify-content: center;
 }
 
-/* Carte publique (/travaux) — même panneau que QG */
 .dashboard .public-suggest-form {
   display: flex;
   flex-direction: column;
@@ -4130,7 +4051,6 @@ textarea {
   justify-content: center;
 }
 
-/* Joindre une photo — carte publique */
 .dashboard .public-file-upload {
   display: flex;
   flex-direction: column;
@@ -4330,7 +4250,6 @@ textarea {
   margin-top: 2px;
 }
 
-/* --- Kanban (revisité, lisible) -------------------------- */
 .dashboard .qg-section--kanban .kanban-cols {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -4464,13 +4383,12 @@ textarea {
   overflow: hidden;
 }
 
-/* --- Effectifs (wrapper section) ------------------------- */
 .dashboard .qg-section--effectifs .kanban {
   margin-top: 0;
 }
 
 .dashboard .qg-section--effectifs .kanban > h3 {
-  display: none; /* le titre est porté par qg-section-head */
+  display: none; 
 }
 
 .dashboard .qg-section--effectifs .kanban > p.muted.small {
@@ -4479,7 +4397,6 @@ textarea {
   color: #6b7a73;
 }
 
-/* --- Détail ticket --------------------------------------- */
 .dashboard .qg-section--detail .detail {
   border-top: none;
   padding-top: 4px;
@@ -4623,7 +4540,6 @@ textarea {
   font-size: 0.8rem;
 }
 
-/* --- Alertes : remontent au-dessus des sections, ton plus clair -- */
 .dashboard .side > .alert {
   margin: 0;
   padding: 8px 12px;
@@ -4632,7 +4548,6 @@ textarea {
   font-weight: 500;
 }
 
-/* --- Réduit l'espace quand le panneau est étroit --------- */
 @media (max-width: 1200px), (max-aspect-ratio: 11/10) {
   .dashboard .side {
     padding: 12px 12px 16px;
@@ -4646,9 +4561,6 @@ textarea {
   }
 }
 
-/* ============================================================
-   Stats strip (bandeau de KPIs au-dessus des filtres)
-   ============================================================ */
 .dashboard .qg-stats-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4703,11 +4615,8 @@ textarea {
 }
 .dashboard .qg-stat--green .qg-stat-value { color: var(--accent2); }
 
-/* ============================================================
-   Overlay de stats flottant sur la carte (bottom-right)
-   ============================================================ */
 .dashboard .map-panel {
-  position: relative; /* déjà en absolute, mais on s'assure pour le contexte enfant */
+  position: relative; 
 }
 
 .dashboard .map-stats-overlay {
@@ -4756,7 +4665,6 @@ textarea {
   background: var(--mg-green);
 }
 
-/* Icône SVG qg-empty */
 .dashboard .qg-empty-icon {
   width: 40px;
   height: 40px;
@@ -4764,13 +4672,6 @@ textarea {
   opacity: 0.85;
 }
 
-/* ============================================================
-   Anamboatra map popup — carte brandée (vert/rouge/blanc),
-   photo en bandeau, statut en pastille, situation reverse-geo,
-   action "Ouvrir le détail". Surcharge du chrome Google Maps.
-   ============================================================ */
-
-/* On neutralise le chrome blanc rond + flèche + scrollbar de Google. */
 .gm-style .gm-style-iw-c {
   padding: 0 !important;
   border-radius: 18px !important;
@@ -4791,12 +4692,10 @@ textarea {
   overflow: visible !important;
 }
 
-/* La petite flèche sous la bulle : on la garde mais on la teinte. */
 .gm-style .gm-style-iw-tc::after {
   background: #ffffff !important;
 }
 
-/* Si le composant rend quand même un bouton de fermeture : on le cache. */
 .gm-style .gm-style-iw-chr,
 .gm-style .gm-ui-hover-effect {
   display: none !important;
@@ -4818,7 +4717,6 @@ textarea {
   width: 340px;
 }
 
-/* Bandeau tricolore vertical (DNA Madagascar) à gauche de la carte. */
 .anam-popup-stripe {
   position: absolute;
   top: 0;
@@ -4864,7 +4762,6 @@ textarea {
   transform: scale(1.08);
 }
 
-/* Photo : bandeau plein, dégradé subtil pour lisibilité du badge. */
 .anam-popup-photo {
   position: relative;
   display: block;
@@ -4877,7 +4774,6 @@ textarea {
   color: #ffffff;
 }
 
-/* Deux vues : signalement (avant) et clôture (après), carte publique. */
 .anam-popup-photos-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5150,15 +5046,10 @@ textarea {
   box-shadow: 0 6px 16px rgba(26, 36, 34, 0.16);
 }
 
-/* Variante suggestion (pas de photo) */
 .anam-popup--suggestion .anam-popup-body {
   padding-top: 16px;
 }
 
-/* ============================================================
-   Bouton flottant "Recentrer sur ma commune" (en bas-gauche
-   de la carte). Affiche le nom de la zone + une cible verte.
-   ============================================================ */
 .map-zone-recenter {
   position: absolute;
   left: 12px;
@@ -5249,10 +5140,6 @@ textarea {
   }
 }
 
-/* ================================================================== */
-/* PUBLIC LANDING — Storytelling 4 écrans plein viewport (scroll snap) */
-/* ================================================================== */
-
 .story-page {
   position: fixed;
   inset: 0;
@@ -5260,9 +5147,9 @@ textarea {
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* PUMA Velocity 2 *Experience* (showcase) — sauge, teal profond, jaune citron */
+  
   color: #1a2422;
-  /* Ne pas clipper l’axe X : les pastilles fixes + libellés longs sinon tronqués (ex. « ENT »). */
+  
   overflow-x: visible;
   overflow-y: hidden;
   background-color: #d0d9d4;
@@ -5280,9 +5167,9 @@ textarea {
   --story-lime-deep: #c9cf6f;
   --story-ink: #1a2422;
   --story-muted: #4a5c59;
-  /* Réserve colonne navigation droite · safe areas */
+  
   --story-pad-right: max(1rem, min(108px + 7vw, 172px));
-  /* Header .story-nav seul (position: fixed) */
+  
   --story-content-top: clamp(
     calc(env(safe-area-inset-top, 0px) + 70px),
     calc(env(safe-area-inset-top, 0px) + 7svh + 52px),
@@ -5304,7 +5191,6 @@ textarea {
   text-rendering: optimizeLegibility;
 }
 
-/* Marque + nav flottante (coin supérieur, safe area) */
 .story-nav {
   position: fixed;
   top: 0;
@@ -5435,7 +5321,6 @@ textarea {
   box-shadow: 0 8px 20px rgba(26, 36, 34, 0.14);
 }
 
-/* Lecture d’écran : annonce l’étape courante */
 .story-sr-only {
   position: absolute;
   width: 1px;
@@ -5449,7 +5334,6 @@ textarea {
   border: 0;
 }
 
-/* Navigation latérale — sobre / institutionnel · étiquettes sur fond opaque */
 .story-dots {
   position: fixed;
   top: 50%;
@@ -5622,14 +5506,13 @@ textarea {
     white-space: nowrap;
   }
 
-  /* Toujours afficher les intitulés : les masquer rendait la navigation illisible. */
+  
   .story-dot:not(.is-on) .story-dot-label,
   .story-dot.is-on .story-dot-label {
     display: block;
   }
 }
 
-/* Conteneur scrollable principal — c'est lui qui snap */
 .story-scroller {
   position: absolute;
   inset: 0;
@@ -5671,7 +5554,6 @@ textarea {
   }
 }
 
-/* Chaque écran : au moins une fenêtre viewport, peut grandir pour ne pas couper le contenu (16:9, docks, etc.) */
 .story-screen {
   position: relative;
   box-sizing: border-box;
@@ -5687,7 +5569,6 @@ textarea {
   overflow-x: clip;
 }
 
-/* Léger vignetage dynamique pour le relief par écran */
 .story-screen::after {
   content: '';
   position: absolute;
@@ -5699,7 +5580,6 @@ textarea {
     inset 0 -min(56px, 8vh) min(80px, 10vw) rgba(62, 96, 95, 0.06);
 }
 
-/* Vidéo héros : garder les bords légers uniquement pour ne pas ternir l’image. */
 .story-screen--manifesto::after {
   box-shadow: inset 0 0 min(72px, 12vw) rgba(0, 0, 0, 0.08);
 }
@@ -5772,9 +5652,6 @@ textarea {
   margin-inline: auto;
 }
 
-
-
-/* Animations d'entrée — déclenchées par .is-active sur la section */
 [data-anim] {
   opacity: 0;
   transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
@@ -5844,7 +5721,6 @@ textarea {
   }
 }
 
-/* ----- Décor : orbes flottantes & grilles ----- */
 .story-orb {
   position: absolute;
   border-radius: 50%;
@@ -5960,7 +5836,6 @@ textarea {
   background-size: 36px 36px;
 }
 
-/* ----- Typo & composants partagés ----- */
 .story-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -6035,7 +5910,6 @@ textarea {
   display: block;
 }
 
-/* H1 ligne 2 : dégradé sur vidéo — WebKit exige -webkit-text-fill-color pour éviter artefacts noirs. */
 .story-h1-grad {
   -webkit-background-clip: text;
   background-clip: text;
@@ -6052,10 +5926,6 @@ textarea {
   );
 }
 
-/*
- * Secondes lignes de titres (carte / rôles) : pas de background-clip: text sous [data-anim] opacity,
- * sinon certains moteurs peignent un bloc noir à la place du texte.
- */
 .story-h2-grad {
   display: inline;
   color: #1a2f2d;
@@ -6137,7 +6007,6 @@ textarea {
   color: rgba(26, 36, 34, 0.82);
 }
 
-/* CTA */
 .story-cta-row {
   display: flex;
   flex-wrap: wrap;
@@ -6229,7 +6098,6 @@ textarea {
   border-color: rgba(255, 255, 255, 0.6);
 }
 
-/* Cue scroll */
 .story-scroll-hint {
   display: inline-flex;
   align-items: center;
@@ -6295,7 +6163,6 @@ textarea {
   }
 }
 
-/* ===== Écran 1 — Manifeste (vidéo plein cadre + texte en surimpression lisible) ===== */
 .story-global-video {
   position: fixed;
   inset: 0;
@@ -6387,7 +6254,6 @@ textarea {
   background: transparent;
 }
 
-/* Bloc héros aligné à gauche (plus de centrage horizontal du conteneur). */
 .story-screen--manifesto > .story-manifesto {
   margin-inline: 0;
   margin-right: auto;
@@ -6409,7 +6275,6 @@ textarea {
   box-shadow: none;
 }
 
-/* Voile léger derrière le bloc titre : lisibilité sur zones très claires de la vidéo. */
 .story-manifesto::before {
   content: '';
   position: absolute;
@@ -6473,11 +6338,6 @@ textarea {
     0 0 48px rgba(0, 0, 0, 0.55);
 }
 
-/*
- * Manifeste · 2e ligne du H1 : ne pas utiliser background-clip: text ici.
- * Avec [data-anim] (opacity) sur le <h1> + polices type Fraunces, Chrome/Edge/Safari
- * peuvent peindre un bloc plein (dégradé jaune) à la place des glyphes.
- */
 .story-screen--manifesto .story-h1-line.story-h1-grad {
   background: none;
   -webkit-background-clip: border-box;
@@ -6545,10 +6405,9 @@ textarea {
   }
 }
 
-/* ===== Écran 2 — Carte vivante ===== */
 .story-screen--carte {
   background: transparent;
-  /* Pas de centrage vertical : évite le contenu « coupé » sur hauteurs courtes (16:9, laptop). */
+  
   align-items: flex-start;
   padding-block: clamp(0.35rem, 1.5vh, 1rem);
 }
@@ -6888,7 +6747,6 @@ textarea {
   }
 }
 
-/* ===== Écran 3 — Quatre regards ===== */
 .story-screen--roles {
   background: transparent;
 }
@@ -7043,7 +6901,6 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-/* ===== Écran 4 — Agir (CTA final sur vidéo assombrie + teinte institutionnelle) ===== */
 .story-screen--agir {
   background: transparent;
   color: #1a2422;
@@ -7088,7 +6945,6 @@ textarea {
   letter-spacing: -0.015em;
 }
 
-/* Focus visible — navigation clavier */
 .story-scroll-hint:focus-visible {
   outline: 2px solid #3e605f;
   outline-offset: 3px;
@@ -7127,7 +6983,6 @@ textarea {
   box-shadow: 0 0 0 3px rgba(62, 96, 95, 0.45);
 }
 
-/* 16:9 large (laptop FHD, TV) — un cran supplémentaire si la hauteur reste confortable */
 @media (min-aspect-ratio: 16/9) and (min-width: 960px) and (min-height: 640px) {
   .story-manifesto {
     max-width: min(760px, 92vw);
@@ -7171,10 +7026,9 @@ textarea {
   }
 }
 
-/* Hauteur courte (HD 720p plein cadre, 16:10, docks) · priorité lisibilité sans scroll excessif */
 @media (max-height: 840px) {
   .story-page {
-    /* Chrome = nav seule (~58–72px hors encoche) */
+    
     --story-content-top: clamp(
       calc(env(safe-area-inset-top, 0px) + 62px),
       calc(env(safe-area-inset-top, 0px) + 5.75svh + 56px),
@@ -7330,7 +7184,6 @@ textarea {
   }
 }
 
-/* Responsive global */
 @media (max-width: 720px) {
   .story-nav {
     padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px;

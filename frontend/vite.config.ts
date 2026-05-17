@@ -7,9 +7,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const proxyPaths = ['/api', '/static', '/map', '/socket.io'];
 
-// Codes d'erreur "normaux" déclenchés quand une page se recharge (HMR),
-// quand l'onglet se ferme ou quand le backend redémarre. On les ignore
-// pour ne pas polluer les logs du dev-server.
 const SILENT_ERRS = new Set([
   'ECONNABORTED',
   'ECONNRESET',
@@ -45,12 +42,17 @@ function proxyTo(target: string) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const api = env.VITE_PROXY_TARGET || 'http://localhost:4000';
+  const api = env.VITE_PROXY_TARGET || 'http://localhost:4000'
   const staffDesktop = mode === 'staff-desktop';
   const openStaffBrowser = process.env.npm_lifecycle_event === 'dev:staff';
 
   return {
     base: staffDesktop ? './' : '/',
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+      },
+    },
     plugins: [react()],
     build: {
       outDir: staffDesktop ? 'dist-staff' : 'dist',

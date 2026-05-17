@@ -26,22 +26,19 @@ function defineSuggestionCitoyen(sequelize) {
       traitee: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       zoneId: { type: DataTypes.UUID, allowNull: false, field: 'zone_id' },
       localisation: { type: DataTypes.JSONB, allowNull: false },
-      /** Photo d’illustration facultative (signalement public). */
-      photoCitoyen: {
+            photoCitoyen: {
         type: DataTypes.STRING(512),
         allowNull: true,
         field: 'photo_citoyen',
       },
-      /** Ordre QG — agent désigné pour se rendre sur place avant signalement officiel. */
-      assignedPatrolUserId: {
+            assignedPatrolUserId: {
         type: DataTypes.UUID,
         allowNull: true,
         field: 'assigned_patrol_user_id',
       },
       instructionQg: { type: DataTypes.STRING(512), allowNull: true, field: 'instruction_qg' },
       dispatchedAt: { type: DataTypes.DATE, allowNull: true, field: 'dispatched_at' },
-      /** Clôture par l’agent sur le terrain (CDC v2 — traçabilité QG). */
-      terrainClotureCode: {
+            terrainClotureCode: {
         type: DataTypes.STRING(32),
         allowNull: true,
         field: 'terrain_cloture_code',

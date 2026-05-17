@@ -14,12 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../../src/api';
-import { useAuth } from '../../src/AuthContext';
-import { colors, STATUT_COLORS, STATUT_LABELS, TYPE_COLORS, TYPE_LABELS } from '../../src/theme';
-import type { Ticket } from '../../src/types';
-
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
+import { api } from '@/lib/api';
+import { useAuth } from '@/auth/AuthContext';
+import { colors, STATUT_COLORS, STATUT_LABELS, TYPE_COLORS, TYPE_LABELS } from '@/theme/theme';
+import type { Ticket } from '@/lib/types';
 
 function formatDate(iso?: string): string {
   if (!iso) return '';
@@ -27,7 +25,6 @@ function formatDate(iso?: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-/* ─── Barre de progression de statut ─────────────────────────────────────── */
 const STEPS: Ticket['statut'][] = ['REPARATION_PREVUE', 'EN_REPARATION', 'TERMINE'];
 const STEPS_INDEX = new Map<Ticket['statut'], number>(STEPS.map((s, i) => [s, i]));
 
@@ -70,7 +67,6 @@ function StatusStepper({ statut }: { statut: Ticket['statut'] }) {
   );
 }
 
-/* ─── Carte de mission active (EN_REPARATION) ─────────────────────────────── */
 function ActiveMissionCard({ ticket, onRefresh }: { ticket: Ticket; onRefresh: () => void }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -108,11 +104,9 @@ function ActiveMissionCard({ ticket, onRefresh }: { ticket: Ticket; onRefresh: (
 
   return (
     <View style={styles.activeCard}>
-      {/* Bandeau coloré type infra */}
       <View style={[styles.activeStripe, { backgroundColor: typeColor }]} />
 
       <View style={styles.activeBody}>
-        {/* En-tête */}
         <View style={styles.activeHeader}>
           <View style={styles.activeHeaderLeft}>
             <View style={[styles.activePulse, { backgroundColor: colors.info + '20' }]}>
@@ -128,7 +122,6 @@ function ActiveMissionCard({ ticket, onRefresh }: { ticket: Ticket; onRefresh: (
           ) : null}
         </View>
 
-        {/* Type + description */}
         <View style={styles.activeTypeRow}>
           <View style={[styles.typeDot, { backgroundColor: typeColor }]} />
           <Text style={[styles.activeTypeLabel, { color: typeColor }]}>
@@ -137,15 +130,12 @@ function ActiveMissionCard({ ticket, onRefresh }: { ticket: Ticket; onRefresh: (
         </View>
         <Text style={styles.activeDesc} numberOfLines={3}>{ticket.description}</Text>
 
-        {/* Photo signalement */}
         {ticket.photoSignalement ? (
           <Image source={{ uri: ticket.photoSignalement }} style={styles.activePhoto} resizeMode="cover" />
         ) : null}
 
-        {/* Stepper */}
         <StatusStepper statut={ticket.statut} />
 
-        {/* Actions */}
         <View style={styles.activeActions}>
           <Pressable
             style={styles.detailBtn}
@@ -175,7 +165,6 @@ function ActiveMissionCard({ ticket, onRefresh }: { ticket: Ticket; onRefresh: (
   );
 }
 
-/* ─── Carte mission standard ──────────────────────────────────────────────── */
 function MissionCard({
   ticket,
   onRefresh,
@@ -206,7 +195,6 @@ function MissionCard({
       style={({ pressed }) => [styles.card, { borderLeftColor: typeColor }, pressed && { opacity: 0.85 }]}
       onPress={() => router.push(`/(app)/ticket/${ticket.id}`)}
     >
-      {/* En-tête */}
       <View style={styles.cardHeader}>
         <View style={[styles.typePill, { borderColor: typeColor }]}>
           <View style={[styles.typePillDot, { backgroundColor: typeColor }]} />
@@ -230,10 +218,8 @@ function MissionCard({
         </View>
       </View>
 
-      {/* Description */}
       <Text style={styles.cardDesc} numberOfLines={2}>{ticket.description}</Text>
 
-      {/* Date fin si terminé */}
       {done && ticket.mission?.dateFin ? (
         <View style={styles.doneRow}>
           <Ionicons name="checkmark-done" size={13} color={colors.ok} />
@@ -241,7 +227,6 @@ function MissionCard({
         </View>
       ) : null}
 
-      {/* Bouton Démarrer si REPARATION_PREVUE */}
       {ticket.statut === 'REPARATION_PREVUE' ? (
         <Pressable
           style={[styles.startBtn, loading && { opacity: 0.6 }]}
@@ -262,7 +247,6 @@ function MissionCard({
   );
 }
 
-/* ─── Écran principal ─────────────────────────────────────────────────────── */
 export default function MissionsScreen() {
   const { user } = useAuth();
   const [tickets, setTickets]       = useState<Ticket[]>([]);
@@ -328,7 +312,6 @@ export default function MissionsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ─────────────────────────────────────────── */}
         <View style={styles.pageHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.pageEyebrow}>ÉQUIPE D'INTERVENTION</Text>
@@ -339,7 +322,6 @@ export default function MissionsScreen() {
           </View>
         </View>
 
-        {/* ── Toggle Actives / Historique ─────────────────────── */}
         <View style={styles.tabRow}>
           <Pressable
             style={[styles.tabBtn, tab === 'actives' && styles.tabBtnActive]}
@@ -384,7 +366,6 @@ export default function MissionsScreen() {
           </Pressable>
         </View>
 
-        {/* ── KPIs (onglet actives seulement) ─────────────────── */}
         {tab === 'actives' && tickets.length > 0 ? (
           <View style={styles.kpiRow}>
             <View style={styles.kpiCard}>
@@ -410,7 +391,6 @@ export default function MissionsScreen() {
           </View>
         ) : null}
 
-        {/* ── Mission EN_REPARATION en vedette (actives seulement) */}
         {tab === 'actives' && currentActiveMission ? (
           <>
             <Text style={styles.sectionTitle}>
@@ -420,7 +400,6 @@ export default function MissionsScreen() {
           </>
         ) : null}
 
-        {/* ── Liste principale ─────────────────────────────────── */}
         {displayed.filter((t) => t.id !== currentActiveMission?.id).length > 0 ? (
           <>
             {tab === 'actives' ? (
@@ -440,7 +419,6 @@ export default function MissionsScreen() {
           </>
         ) : null}
 
-        {/* ── Empty state ──────────────────────────────────────── */}
         {displayed.length === 0 ? (
           <View style={styles.empty}>
             <View style={styles.emptyIconWrap}>
@@ -467,14 +445,12 @@ export default function MissionsScreen() {
   );
 }
 
-/* ─── Styles ──────────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
   flex:   { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 16, gap: 10 },
 
-  /* Header page */
-  pageHeader: {
+    pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -510,8 +486,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  /* Toggle Actives / Historique */
-  tabRow: {
+    tabRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 4,
@@ -562,8 +537,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  /* KPIs */
-  kpiRow: { flexDirection: 'row', gap: 8 },
+    kpiRow: { flexDirection: 'row', gap: 8 },
   kpiCard: {
     flex: 1,
     backgroundColor: colors.panel,
@@ -584,8 +558,7 @@ const styles = StyleSheet.create({
   },
   kpiLabel: { fontSize: 10, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.06 },
 
-  /* Section title */
-  sectionTitle: {
+    sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.muted,
@@ -595,8 +568,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 
-  /* ── Carte active ──────────────────────────────────────── */
-  activeCard: {
+    activeCard: {
     backgroundColor: colors.panel,
     borderRadius: 18,
     overflow: 'hidden',
@@ -670,8 +642,7 @@ const styles = StyleSheet.create({
   },
   clotureBtnText: { fontSize: 13, fontWeight: '700', color: colors.white },
 
-  /* ── Stepper ───────────────────────────────────────────── */
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 0, marginVertical: 4 },
+    stepper: { flexDirection: 'row', alignItems: 'center', gap: 0, marginVertical: 4 },
   stepRow:  { flexDirection: 'row', alignItems: 'center', flex: 1 },
   stepDot: {
     width: 18,
@@ -692,8 +663,7 @@ const styles = StyleSheet.create({
   },
   stepLine: { width: 18, height: 2, marginHorizontal: 2 },
 
-  /* ── Carte standard ────────────────────────────────────── */
-  card: {
+    card: {
     backgroundColor: colors.panel,
     borderRadius: 14,
     padding: 14,
@@ -761,8 +731,7 @@ const styles = StyleSheet.create({
   },
   startBtnText: { fontSize: 13, fontWeight: '700', color: colors.white },
 
-  /* ── Empty state ───────────────────────────────────────── */
-  empty: { paddingVertical: 60, alignItems: 'center', gap: 10 },
+    empty: { paddingVertical: 60, alignItems: 'center', gap: 10 },
   emptyIconWrap: {
     width: 80,
     height: 80,

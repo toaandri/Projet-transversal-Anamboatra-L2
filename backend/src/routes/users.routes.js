@@ -25,11 +25,6 @@ router.get('/me', async (req, res) => {
   });
 });
 
-/**
- * Zone (commune / arrondissement / dépôt) à laquelle l'utilisateur courant est
- * rattaché, avec sa géométrie. Utilisé par le dashboard pour centrer la carte
- * sur la zone d'action du QG / agent / équipe.
- */
 router.get('/me/zone', async (req, res) => {
   if (!req.user.zoneId) return res.json({ zone: null });
   const zone = await Zone.findByPk(req.user.zoneId, {
@@ -68,13 +63,6 @@ router.patch(
   },
 );
 
-/**
- * CDC v2.3 — liste des équipes d'intervention disponibles pour l'affectation.
- *
- * Les équipes sont désormais rattachées à des DEPOT_REPARATION (cross-zone).
- * On retourne donc toutes les équipes actives, avec leur spécialité et leur
- * dépôt, pour que l'Admin QG puisse filtrer au moment de l'affectation.
- */
 router.get('/equipes', async (req, res) => {
   if (req.user.role !== RoleEnum.ADMIN_QG) {
     return res.status(403).json({ message: 'Admin QG uniquement' });

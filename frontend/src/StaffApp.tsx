@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/auth/useAuth';
 import { AdminPage } from './pages/AdminPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
@@ -18,7 +18,6 @@ function LoginGate() {
   return <LoginPage />;
 }
 
-/** Application poste QG / admin — livrée en .exe (Electron), pas exposée sur le site citoyen. */
 export default function StaffApp() {
   return (
     <Routes>

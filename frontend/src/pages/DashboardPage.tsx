@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { api } from '../api';
-import { useAuth } from '../useAuth';
-import { QgInterventionAgentsPanel, QgPatrolAgentsPanel } from '../components/EffectifsPanel';
-import { anam, anamRgba, typeInfraColors, statutUiColors } from '../anamboatraTheme';
-import { MapView } from '../components/MapView';
-import { STATUT_LABELS, ROLE_LABELS } from '../mapColors';
+import { api } from '@/lib/api';
+import { useAuth } from '@/auth/useAuth';
+import { QgInterventionAgentsPanel, QgPatrolAgentsPanel } from '@/components/EffectifsPanel';
+import { anam, anamRgba, typeInfraColors, statutUiColors } from '@/theme/anamboatraTheme';
+import { MapView } from '@/components/MapView';
+import { STATUT_LABELS, ROLE_LABELS } from '@/theme/mapColors';
 import type {
   EquipeUser,
   GeoJsonFeature,
@@ -17,8 +17,8 @@ import type {
   TypeInfrastructureLegacy,
   Urgence,
   Zone,
-} from '../types';
-import { useMapSocket } from '../useMapSocket';
+} from '@/lib/types';
+import { useMapSocket } from '@/hooks/useMapSocket';
 
 const STATUTS_ORDER: Statut[] = [
   'EN_ATTENTE_CONFIRMATION',
@@ -143,8 +143,7 @@ export function DashboardPage() {
   const [mapVisible, setMapVisible] = useState(true);
   const [selectedSuggestion, setSelectedSuggestion] = useState<SuggestionCitoyen | null>(null);
   const [qgMenuPage, setQgMenuPage] = useState<QgMenuPage>('signalements');
-  /** Choix du lieu d’une équipe d’intervention sur la carte (page Intervention). */
-  const [pickEquipeLieu, setPickEquipeLieu] = useState(false);
+    const [pickEquipeLieu, setPickEquipeLieu] = useState(false);
   const [equipeLieuCoords, setEquipeLieuCoords] = useState<{ lat: number; lng: number } | null>(null);
   const detailRef = useRef<HTMLElement>(null);
   const sideRef   = useRef<HTMLElement>(null);
@@ -232,7 +231,6 @@ export function DashboardPage() {
     });
   }, [tickets, filters]);
 
-  // Stats d'en-tête (tickets bruts)
   const stats = useMemo(() => ({
     total:   tickets.length,
     urgent:  tickets.filter((t) => t.urgence === 'URGENT').length,
@@ -397,7 +395,6 @@ export function DashboardPage() {
           {err ? <p className="alert error">{err}</p> : null}
           {msg ? <p className="alert success">{msg}</p> : null}
 
-          {/* ---- Stats strip (ADMIN_QG · page signalements) ---- */}
           {role === 'ADMIN_QG' && qgMenuPage === 'signalements' && tickets.length > 0 ? (
             <div className="qg-stats-strip">
               <div className="qg-stat">

@@ -1,7 +1,3 @@
-/**
- * Point dans polygone (GeoJSON, anneaux en [lng, lat]).
- * Anneaux intérieurs = trous (commune avec exclusion).
- */
 
 function pointInRingLngLat(lng, lat, ring) {
   if (!Array.isArray(ring) || ring.length < 3) return false;
@@ -19,7 +15,6 @@ function pointInRingLngLat(lng, lat, ring) {
   return inside;
 }
 
-/** @param {number[][][]} polygonCoords GeoJSON Polygon coordinates (rings) */
 function pointInPolygonCoords(lng, lat, polygonCoords) {
   if (!polygonCoords || !polygonCoords[0]) return false;
   const outer = polygonCoords[0];
@@ -30,11 +25,6 @@ function pointInPolygonCoords(lng, lat, polygonCoords) {
   return true;
 }
 
-/**
- * @param {number} lng
- * @param {number} lat
- * @param {object} geometry GeoJSON Polygon | MultiPolygon
- */
 function pointInPolygonLngLat(lng, lat, geometry) {
   if (!geometry || typeof geometry !== 'object') return true;
   if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
@@ -58,7 +48,6 @@ function isValidCoordPair(lng, lat) {
   );
 }
 
-/** Coerce JSONB / formulaire éventuellement string */
 function toFiniteNumber(v) {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
   if (typeof v === 'string' && v.trim() !== '') {

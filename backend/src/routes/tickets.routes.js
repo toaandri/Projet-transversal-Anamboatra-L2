@@ -92,8 +92,7 @@ router.post(
     const zoneId = req.user.zoneId;
     if (!zoneId) return res.status(400).json({ message: 'Agent sans zone assignée' });
 
-    /** @type {string | null} */
-    let originSuggestionIdVal = null;
+        let originSuggestionIdVal = null;
     if (req.body.originSuggestionId) {
       const sug = await SuggestionCitoyen.findOne({
         where: {

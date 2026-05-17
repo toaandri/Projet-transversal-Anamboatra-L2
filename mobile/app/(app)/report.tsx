@@ -18,12 +18,12 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../../src/api';
-import { useAuth } from '../../src/AuthContext';
+import { api } from '@/lib/api';
+import { useAuth } from '@/auth/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { OsrmRouteModal } from '../../src/OsrmRouteModal';
-import { colors, TYPE_COLORS, TYPE_LABELS } from '../../src/theme';
-import type { SuggestionCitoyen, TerrainClotureCodePatrouille, TypeInfrastructure, Urgence } from '../../src/types';
+import { OsrmRouteModal } from '@/components/OsrmRouteModal';
+import { colors, TYPE_COLORS, TYPE_LABELS } from '@/theme/theme';
+import type { SuggestionCitoyen, TerrainClotureCodePatrouille, TypeInfrastructure, Urgence } from '@/lib/types';
 
 const TYPES: TypeInfrastructure[] = ['ROUTE', 'ELECTRICITE_EAU', 'PROPRIETE_PUBLIQUE', 'SALUBRITE'];
 
@@ -62,10 +62,8 @@ export default function ReportScreen() {
   const [busy, setBusy] = useState(false);
   const [gpsBusy, setGpsBusy] = useState(false);
 
-  /** Mission QG (CDC v2) : rejoindre le lieu → puis constat officiel OU clôture terrain. */
-  const [surZone, setSurZone] = useState(false);
-  /** null = pas encore choisi après confirmation sur zone ; TICKET | CLOTURE */
-  const [terrainChoice, setTerrainChoice] = useState<null | 'TICKET' | 'CLOTURE'>(null);
+    const [surZone, setSurZone] = useState(false);
+    const [terrainChoice, setTerrainChoice] = useState<null | 'TICKET' | 'CLOTURE'>(null);
 
   const [closeModalVisible, setCloseModalVisible] = useState(false);
   const [closeCode, setCloseCode] = useState<TerrainClotureCodePatrouille>('NON_REPERE');

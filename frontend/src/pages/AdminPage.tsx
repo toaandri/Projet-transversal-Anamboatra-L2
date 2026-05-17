@@ -1,4 +1,3 @@
-/** Console nationale MTP — référentiel territorial et comptes QG (Anamboatra). */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -10,18 +9,18 @@ import {
   type MapCameraChangedEvent,
   type MapMouseEvent,
 } from '@vis.gl/react-google-maps';
-import { api, getAdminToken, getToken, setAdminToken } from '../api';
-import { ANAMBOATRA_MAP_STYLE } from '../mapStyles';
-import { type MapBasemapId, googleMapTypeFromBasemap } from '../mapBasemap';
-import { useAuth } from '../useAuth';
+import { api, getAdminToken, getToken, setAdminToken } from '@/lib/api';
+import { ANAMBOATRA_MAP_STYLE } from '@/theme/mapStyles';
+import { type MapBasemapId, googleMapTypeFromBasemap } from '@/theme/mapBasemap';
+import { useAuth } from '@/auth/useAuth';
 import type {
   AdminQg,
   GeoJsonPolygon,
   TypeZone,
   Zone,
-} from '../types';
-import { OrgEmailLocalField, fullOrgEmail, localPartFromInput } from '../components/OrgEmailLocalField';
-import { anam } from '../anamboatraTheme';
+} from '@/lib/types';
+import { OrgEmailLocalField, fullOrgEmail, localPartFromInput } from '@/components/OrgEmailLocalField';
+import { anam } from '@/theme/anamboatraTheme';
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
 const MADAGASCAR_BOUNDS = {
@@ -42,7 +41,6 @@ const ZONE_TYPE_LABEL: Record<TypeZone, string> = {
   DEPOT_REPARATION: 'Dépôt de réparation',
 };
 
-/** Types de zone gérés par l’administration nationale (référentiel). */
 type SuperAdminZoneType = 'ARRONDISSEMENT' | 'ROUTE_NATIONALE';
 
 const SUPER_ADMIN_ZONE_TYPES: SuperAdminZoneType[] = ['ARRONDISSEMENT', 'ROUTE_NATIONALE'];
@@ -52,8 +50,7 @@ type QgAdminEditRow = {
   nom: string;
   prenom: string;
   emailLocal: string;
-  /** Vide = ne pas changer le mot de passe. */
-  password: string;
+    password: string;
   numeroTelephone: string;
   matricule: string;
 };
@@ -65,15 +62,13 @@ type ZoneDraft = {
   code: string;
   numeroQg: string;
   vertices: { lat: number; lng: number }[];
-  /** Création commune uniquement : 1er admin QG (même flux que l’onglet Admins QG). */
-  qgPrenom: string;
+    qgPrenom: string;
   qgNom: string;
   qgEmailLocal: string;
   qgPassword: string;
   qgNumeroTelephone: string;
   qgMatricule: string;
-  /** Modification : admins QG déjà rattachés au périmètre. */
-  qgAdminRows: QgAdminEditRow[];
+    qgAdminRows: QgAdminEditRow[];
 };
 
 const EMPTY_DRAFT: ZoneDraft = {
@@ -189,10 +184,8 @@ export function AdminPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [admins, setAdmins] = useState<AdminQg[]>([]);
   const [draft, setDraft] = useState<ZoneDraft>(EMPTY_DRAFT);
-  /** Panneau de création (barre gauche) : visible seulement après « Ajouter une zone » ou en édition. */
-  const [showNewZoneForm, setShowNewZoneForm] = useState(false);
-  /** Carte interactive (point central + tracer) : après « Ajouter un emplacement », ou toujours en édition. */
-  const [mapPlacementActive, setMapPlacementActive] = useState(false);
+    const [showNewZoneForm, setShowNewZoneForm] = useState(false);
+    const [mapPlacementActive, setMapPlacementActive] = useState(false);
   const [detailZone, setDetailZone] = useState<Zone | null>(null);
   const zoneCountByType = useMemo(
     () => ({
@@ -301,7 +294,6 @@ export function AdminPage() {
     })();
   }, [tryJwt, tryToken]);
 
-  // Si plus authentifié, écran d'accès
   if (!mode) {
     return (
       <div className="page center">
@@ -657,10 +649,6 @@ export function AdminPage() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Sub-components                                                     */
-/* ------------------------------------------------------------------ */
-
 function formatShortDate(iso?: string): string | null {
   if (!iso) return null;
   try {
@@ -839,7 +827,7 @@ function ZoneEditor({
   carteVisible?: boolean;
   mapPlacementActive?: boolean;
   onBeginMapPlacement?: () => void;
-  /** Nouvelle zone : quitter la carte placement et revenir en consultation sans fermer le formulaire. */
+
   onCancelMapPlacement?: () => void;
   onSave: (
     payload: {
@@ -1249,8 +1237,7 @@ function ZoneList({
   onEdit: (z: Zone) => void;
   onDelete: (z: Zone) => Promise<void> | void;
 }) {
-  /** Dépôts de réparation : gérés hors de cet écran. */
-  const listZones = useMemo(() => zones.filter((z) => z.type !== 'DEPOT_REPARATION'), [zones]);
+    const listZones = useMemo(() => zones.filter((z) => z.type !== 'DEPOT_REPARATION'), [zones]);
   const [filter, setFilter] = useState<'ALL' | SuperAdminZoneType>('ALL');
   const [query, setQuery] = useState('');
   const filtered = listZones.filter((z) => {
@@ -1493,7 +1480,7 @@ function PolygonPicker({
   const [confirmedCenter, setConfirmedCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [regionFilter, setRegionFilter] = useState<'ALL' | RegionName>('ALL');
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
-  /** Consultation carte : axe routier national (exclusif avec la commune sélectionnée). */
+
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
 
   if (!apiKey) {
@@ -1515,8 +1502,7 @@ function PolygonPicker({
                   onChange(geoJsonToVertices(parsed));
                 }
               } catch {
-                /* ignore */
-              }
+                              }
             }}
           />
         </div>
@@ -1545,8 +1531,7 @@ function PolygonPicker({
     }
   }, [interactionEnabled]);
 
-  /** Édition d’une zone existante avec polygone : passer directement en délimitation sans re-cliquer le centre. */
-  useEffect(() => {
+    useEffect(() => {
     if (!interactionEnabled) return;
     if (!editingZoneId || vertices.length < 3) return;
     setConfirmedCenter((prev) => prev ?? centroidOfRing(vertices) ?? null);

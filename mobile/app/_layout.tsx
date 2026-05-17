@@ -2,8 +2,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider } from '../src/AuthContext';
-import { colors } from '../src/theme';
+import { AuthProvider } from '@/auth/AuthContext';
+import { colors } from '@/theme/theme';
 
 export default function RootLayout() {
   return (

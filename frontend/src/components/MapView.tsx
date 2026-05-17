@@ -9,8 +9,8 @@ import {
   useMap,
   type MapMouseEvent,
 } from '@vis.gl/react-google-maps';
-import { ANAMBOATRA_MAP_STYLE } from '../mapStyles';
-import { type MapBasemapId, googleMapTypeFromBasemap } from '../mapBasemap';
+import { ANAMBOATRA_MAP_STYLE } from '@/theme/mapStyles';
+import { type MapBasemapId, googleMapTypeFromBasemap } from '@/theme/mapBasemap';
 import type {
   GeoJsonFeature,
   GeoJsonPolygon,
@@ -19,9 +19,9 @@ import type {
   TypeInfrastructureLegacy,
   Urgence,
   Zone,
-} from '../types';
-import { anam, statutUiColors, typeInfraColors } from '../anamboatraTheme';
-import { STATUT_LABELS, ticketMarkerStyle, suggestionMarkerStyle } from '../mapColors';
+} from '@/lib/types';
+import { anam, statutUiColors, typeInfraColors } from '@/theme/anamboatraTheme';
+import { STATUT_LABELS, ticketMarkerStyle, suggestionMarkerStyle } from '@/theme/mapColors';
 
 const STATUT_COLORS: Record<Statut, string> = {
   EN_ATTENTE_CONFIRMATION: statutUiColors.EN_ATTENTE_CONFIRMATION,
@@ -65,22 +65,14 @@ type Props = {
   viewerRole: Role | null;
   onSelectFeature?: (feature: GeoJsonFeature) => void;
   pickMode?: boolean;
-  /** Texte au-dessus de la carte en mode pointage ; défaut générique. */
+
   pickBannerText?: string;
   onPickLatLng?: (lat: number, lng: number) => void;
   height?: string;
-  /** Zone d'action du viewer (commune QG, dépôt, etc.). Affichée en surbrillance. */
+
   myZone?: Zone | null;
-  /**
-   * Carte publique / mobile : pas de Pegman, pas de plein écran ni zoom natif (évite le chevauchement
-   * avec le bouton Menu), pas de sélecteur Plan/Satellite — zoom au pincement / molette.
-   */
-  compactUI?: boolean;
-  /**
-   * Liste latérale / sélection externe : centre la carte sur ce point du GeoJSON source
-   * et ouvre l’infobulle. Incrémenter `nonce` à chaque clic pour le même index.
-   */
-  focusGeoIndex?: { index: number; nonce: number } | null;
+    compactUI?: boolean;
+    focusGeoIndex?: { index: number; nonce: number } | null;
 };
 
 type FeatureProps = {
@@ -94,8 +86,7 @@ type FeatureProps = {
   photoSignalement?: string;
   dateSignalement?: string;
   dateSoumission?: string;
-  /** Photo après travaux (clôture mission), si déjà fournie. */
-  photoCloture?: string | null;
+    photoCloture?: string | null;
 };
 
 function propsOf(f: GeoJsonFeature): FeatureProps {
@@ -232,7 +223,6 @@ export function MapView({
       style={{ height, borderRadius: 12, overflow: 'hidden', position: 'relative' }}
     >
       <APIProvider apiKey={apiKey}>
-        {/* Contrôle caméra API récent (flèches + zoom losange) : désactivé pour ne pas doubler avec zoomControl ni chevaucher le bouton Menu (compactUI). */}
         <Map
           defaultCenter={TANA}
           defaultZoom={12}
@@ -257,7 +247,6 @@ export function MapView({
           <FocusGeoIndexEffect focus={focusGeoIndex} rows={features} onPickIndex={setSelectedIdx} />
           {zonePaths ? (
             <>
-              {/* Halo extérieur (style "spotlight" doux pour bien faire ressortir) */}
               <Polygon
                 paths={zonePaths}
                 strokeColor="#ffffff"
@@ -268,7 +257,6 @@ export function MapView({
                 clickable={false}
                 zIndex={1}
               />
-              {/* Liseré principal Anamboatra */}
               <Polygon
                 paths={zonePaths}
                 strokeColor={anam.teal}
@@ -364,11 +352,6 @@ export function MapView({
   );
 }
 
-/* ----------------------------------------------------------
- * Sous-composants & helpers : zone du QG (polygone, fitBounds,
- * marqueur central, bouton "Recentrer sur ma commune").
- * --------------------------------------------------------*/
-
 type LatLng = { lat: number; lng: number };
 
 function zoneToPaths(geo?: GeoJsonPolygon | { type: string; coordinates?: unknown } | null): LatLng[][] | null {
@@ -442,7 +425,6 @@ function ZoneFocus({ zone, paths }: { zone: Zone | null; paths: LatLng[][] | nul
     }
   }, [map, paths]);
 
-  // Recentre automatiquement la première fois que la zone change.
   useEffect(() => {
     if (!map || !paths || !zone) return;
     if (fittedRef.current === zone.id) return;
@@ -534,8 +516,7 @@ function FeaturePopup({
   feature: GeoJsonFeature;
   onClose: () => void;
   onOpenDetail: () => void;
-  /** Carte citoyenne (compactUI) : pas de panneau détail — masquer l’action. */
-  showOpenDetailAction?: boolean;
+    showOpenDetailAction?: boolean;
 }) {
   const p = propsOf(feature);
   const [lng, lat] = feature.geometry.coordinates;

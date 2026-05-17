@@ -11,9 +11,9 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../src/api';
-import { colors, TYPE_COLORS, TYPE_LABELS } from '../../src/theme';
-import type { SuggestionCitoyen } from '../../src/types';
+import { api } from '@/lib/api';
+import { colors, TYPE_COLORS, TYPE_LABELS } from '@/theme/theme';
+import type { SuggestionCitoyen } from '@/lib/types';
 
 function formatDate(iso?: string): string {
   if (!iso) return '';

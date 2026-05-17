@@ -20,7 +20,7 @@ api.use('/suggestions', suggestionsRoutes);
 api.use('/map', mapRoutes);
 api.use('/public', publicRoutes);
 api.use('/users', usersRoutes);
-// CDC v2.2
+
 api.use('/admin', adminRoutes);
 api.use('/qg', qgAgentsRoutes);
 

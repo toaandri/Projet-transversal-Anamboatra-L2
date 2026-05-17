@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../src/AuthContext';
-import { colors } from '../src/theme';
-import { API_URL } from '../src/config';
+import { useAuth } from '@/auth/AuthContext';
+import { colors } from '@/theme/theme';
+import { API_URL } from '@/lib/config';
 
 export default function LoginScreen() {
   const { login } = useAuth();

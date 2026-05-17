@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
-import { MapView } from '../components/MapView';
-import { STATUT_LABELS } from '../mapColors';
-import type { GeoJsonFeature, Statut, TypeInfrastructure } from '../types';
-import { useMapSocket } from '../useMapSocket';
-import { anam, statutUiColors, typeInfraColors } from '../anamboatraTheme';
+import { api } from '@/lib/api';
+import { MapView } from '@/components/MapView';
+import { STATUT_LABELS } from '@/theme/mapColors';
+import type { GeoJsonFeature, Statut, TypeInfrastructure } from '@/lib/types';
+import { useMapSocket } from '@/hooks/useMapSocket';
+import { anam, statutUiColors, typeInfraColors } from '@/theme/anamboatraTheme';
 
 const TYPE_LABELS: Record<string, string> = {
   ROUTE: 'Route',

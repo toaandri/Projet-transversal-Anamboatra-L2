@@ -2,7 +2,7 @@ const { Sequelize } = require('sequelize');
 const { env } = require('./env');
 
 function createSequelize() {
-  // Mettre à `console.log` (ou une fonction custom) pour voir les SQL exécutés.
+
   const logging = false;
 
   if (env.databaseUrl) {

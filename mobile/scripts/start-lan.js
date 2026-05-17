@@ -1,24 +1,4 @@
 #!/usr/bin/env node
-/**
- * Anamboatra mobile — démarre Expo en LAN en forçant la bonne IP.
- *
- * Sur Windows, `expo start --lan` échoue souvent car Node liste plusieurs
- * interfaces virtuelles (VirtualBox, vEthernet WSL, Hyper-V, Docker…) et choisit
- * la mauvaise. Résultat : le QR code pointe sur 127.0.0.1 ou sur une IP que le
- * téléphone ne peut pas joindre, et Expo Go reste bloqué sur "loading" ou
- * affiche "Something went wrong".
- *
- * Ce script :
- *  1. Liste toutes les IPv4 non-internes,
- *  2. Filtre les interfaces virtuelles connues (vEthernet, VirtualBox…),
- *  3. Préfère les plages Wi-Fi/box ADSL classiques (192.168.x, 10.x, 172.16-31.x),
- *  4. Exporte `REACT_NATIVE_PACKAGER_HOSTNAME=<IP>` pour Metro,
- *  5. Lance `npx expo start --lan --clear` avec les autres args éventuels.
- *
- * Usage :
- *   node scripts/start-lan.js              → auto-détection
- *   node scripts/start-lan.js 192.168.1.42 → IP forcée
- */
 const os = require('os');
 const { spawn } = require('child_process');
 
@@ -26,8 +6,7 @@ const FORBIDDEN_NAME = /(virtualbox|vethernet|vmware|hyper-v|loopback|docker|wsl
 
 function listLanCandidates() {
   const ifaces = os.networkInterfaces();
-  /** @type {Array<{ name: string, address: string, score: number }>} */
-  const out = [];
+    const out = [];
   for (const [name, addrs] of Object.entries(ifaces)) {
     if (!addrs) continue;
     for (const a of addrs) {
@@ -40,11 +19,10 @@ function listLanCandidates() {
       if (/wi-?fi|wlan|wireless/i.test(name)) score += 25;
       if (/ethernet|en|eth/i.test(name)) score += 10;
       if (isVirtual) score -= 50;
-      // Plages d'IP typiquement utilisées par les adaptateurs virtuels.
-      // Le téléphone ne les atteint jamais, on les pénalise fortement.
-      if (a.address.startsWith('192.168.56.')) score -= 60; // VirtualBox host-only
-      if (a.address.startsWith('192.168.99.')) score -= 60; // docker-machine
-      if (a.address.startsWith('169.254.')) score -= 80;     // APIPA / link-local
+
+      if (a.address.startsWith('192.168.56.')) score -= 60;
+      if (a.address.startsWith('192.168.99.')) score -= 60;
+      if (a.address.startsWith('169.254.')) score -= 80;
       out.push({ name, address: a.address, score });
     }
   }

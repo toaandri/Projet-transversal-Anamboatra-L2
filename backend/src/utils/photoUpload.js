@@ -33,14 +33,6 @@ const uploadPhoto = multer({
   },
 });
 
-/**
- * Renvoie un chemin relatif (`/static/<file>`) plutôt qu'une URL absolue.
- * - Le frontend web utilise le proxy Vite (`/static` → backend) ou le même
- *   reverse proxy en prod, donc les chemins relatifs fonctionnent.
- * - L'app mobile préfixe automatiquement l'API_URL aux chemins commençant
- *   par `/`, donc la même valeur stockée est joignable depuis le téléphone
- *   sans dépendre d'un PUBLIC_BASE_URL figé à `localhost`.
- */
 function publicUrlForStoredFile(filename) {
   return `/static/${filename}`;
 }

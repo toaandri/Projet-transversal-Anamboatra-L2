@@ -1,21 +1,3 @@
-/**
- * CDC v2.3 — Console super-admin.
- *
- * Accès : compte SUPER_ADMIN (JWT) OU jeton X-Admin-Token (legacy).
- * Cf. middleware/requireAdminAccess.js.
- *
- * Scope :
- *   - CRUD zones « territoire super-admin » uniquement : arrondissement (commune)
- *     et route nationale, avec géométrie GeoJSON. Les DEPOT_REPARATION ne sont ni
- *     créés ni modifiés depuis cette console (gérés au niveau communal).
- *   - CRUD admins QG rattachés à une zone de commune.
- *   - CRUD agents de réparation (EQUIPE_INTERVENTION) rattachés à un dépôt,
- *     avec spécialité (ROUTE / JIRAMA / MACON / NETTOYEUR), suspension,
- *     réinitialisation de l'appareil lié, suppression.
- *
- * La création des AGENT_PATROUILLE reste à la main de chaque Admin QG depuis
- * son dashboard (cf. qgAgents.routes.js).
- */
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
@@ -32,10 +14,8 @@ const router = express.Router();
 
 router.use(requireAdminAccess);
 
-/** Types de zone que la console super-admin peut créer ou assujettir à PATCH. */
 const SUPER_ADMIN_ZONE_TYPES = [TypeZoneEnum.ARRONDISSEMENT, TypeZoneEnum.ROUTE_NATIONALE];
 
-/* --------------------------- Serializers -------------------------- */
 function serializeZone(z) {
   return {
     id: z.id,
@@ -67,12 +47,10 @@ function serializeUser(u) {
   };
 }
 
-/* ----------------------------- Health ----------------------------- */
 router.get('/ping', (req, res) => {
   res.json({ ok: true, scope: 'admin-console', via: req.adminAuth?.via || null });
 });
 
-/* ------------------------------ Zones ----------------------------- */
 router.get('/zones', async (_req, res) => {
   const zones = await Zone.findAll({ order: [['code', 'ASC']] });
   return res.json({ zones: zones.map(serializeZone) });
@@ -166,7 +144,6 @@ router.delete('/zones/:id', param('id').isUUID(), async (req, res) => {
   return res.json({ ok: true });
 });
 
-/* ---------------------------- Admins QG --------------------------- */
 router.get('/qg-admins', async (_req, res) => {
   const admins = await User.findAll({
     where: { role: RoleEnum.ADMIN_QG },
@@ -268,8 +245,6 @@ router.patch(
   },
 );
 
-/* ---------------------- Agents de réparation ---------------------- */
-/* (EQUIPE_INTERVENTION rattaché à un DEPOT_REPARATION, avec spécialité) */
 router.use('/agents', (_req, res) => {
   return res.status(403).json({
     message:
@@ -419,13 +394,10 @@ router.delete('/agents/:id', param('id').isUUID(), async (req, res) => {
   const agent = await findRepairAgent(req.params.id);
   if (!agent) return res.status(404).json({ message: 'Agent de réparation introuvable' });
 
-  // Les équipes sont pointées par assignedUserIds dans Ticket.mission (JSONB).
-  // On bloque la suppression si le compte est assigné à une mission en cours.
   const activeMission = await Ticket.findOne({
     where: {
       statut: { [Op.in]: ['REPARATION_PREVUE', 'EN_REPARATION'] },
-      // on ne peut pas requêter un id dans un JSONB array sans opérateur dédié —
-      // ce filtrage-là est tenté best-effort en JS
+
     },
   });
   if (activeMission) {

@@ -24,14 +24,6 @@ function geometryAreaSq(geometry) {
   return Infinity;
 }
 
-/**
- * Commune (ARRONDISSEMENT) dont le polygone contient le point.
- * En cas de chevauchement anormal, garde la surface minimale (périmètre le plus local).
- *
- * @param {import('sequelize').ModelStatic} Zone
- * @param {number} lng
- * @param {number} lat
- */
 async function findArrondissementZoneForCoordinates(Zone, lng, lat) {
   const ln = toFiniteNumber(lng);
   const lt = toFiniteNumber(lat);

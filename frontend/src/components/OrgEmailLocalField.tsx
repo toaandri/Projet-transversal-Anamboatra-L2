@@ -1,12 +1,8 @@
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
 
-/** Domaine institutionnel forcé pour les comptes créés depuis l'espace métier Anamboatra. */
 export const ORG_EMAIL_DOMAIN = 'anamboatra.mg';
 
-/**
- * Accepte soit la partie avant @, soit un collage complet (`truc@yahoo.com` → `truc`).
- */
 export function localPartFromInput(raw: string): string {
   const t = raw.trim();
   const at = t.indexOf('@');

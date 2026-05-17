@@ -34,9 +34,6 @@ backend/uploads/
 backend/coverage/
 backend/dist/
 backend/.turbo/
-backend/.env.example
-backend/sql/init_postgres.sql
-backend/docker-compose.yml
 
 # --- Artefacts temporaires (extraction cahier des charges, etc.) ---
 _docx_new/
@@ -46,6 +43,8 @@ _cahier_text.txt
 # --- Frontend React (dossier prévu) ---
 frontend/node_modules/
 frontend/dist/
+frontend/dist-staff/
+frontend/release/
 frontend/build/
 frontend/.vite/
 frontend/.cache/
@@ -79,6 +78,4 @@ coverage/
 .temp/
 tmp/
 Cahier_des_charges_Anamboatra_v2.2.docx
-README.md
-
 scripts/update_cahier_uml.py

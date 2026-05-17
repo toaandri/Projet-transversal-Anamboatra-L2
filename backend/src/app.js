@@ -32,8 +32,7 @@ function createApp() {
     }),
   );
 
-  /** Alias CDC : carte publique nationale (tous les dossiers approuvés visibles), sans préfixe /api */
-  app.get('/map/tiles', async (req, res, next) => {
+    app.get('/map/tiles', async (req, res, next) => {
     try {
       const payload = await buildMapPayload({ type: MapRole.PUBLIC });
       return res.json(payload);

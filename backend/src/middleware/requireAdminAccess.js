@@ -1,13 +1,3 @@
-/**
- * CDC v2.3 — accès à la console d'administration.
- *
- * Deux modes acceptés (pratique pour la transition) :
- *   1) JWT d'un compte SUPER_ADMIN en Authorization: Bearer <token>   (flux normal)
- *   2) Jeton partagé X-Admin-Token = ADMIN_SETUP_TOKEN                (dépannage)
- *
- * Le mode 1 est privilégié. Le mode 2 n'est actif que si ADMIN_SETUP_TOKEN
- * est défini dans l'environnement serveur (sinon ignoré silencieusement).
- */
 const { env } = require('../config/env');
 const { verifyToken } = require('../utils/jwt');
 const { User } = require('../models/postgres');
@@ -24,7 +14,7 @@ function timingSafeEqual(a, b) {
 }
 
 async function requireAdminAccess(req, res, next) {
-  // --- Voie 2 : jeton partagé (legacy / dépannage) ---
+
   const expected = env.adminSetupToken;
   const received = req.headers['x-admin-token'];
   if (expected && typeof received === 'string' && timingSafeEqual(received, expected)) {
@@ -32,7 +22,6 @@ async function requireAdminAccess(req, res, next) {
     return next();
   }
 
-  // --- Voie 1 : JWT SUPER_ADMIN ---
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     const token = header.slice('Bearer '.length).trim();
@@ -46,8 +35,7 @@ async function requireAdminAccess(req, res, next) {
         return next();
       }
     } catch {
-      /* fallthrough */
-    }
+          }
   }
 
   return res.status(401).json({

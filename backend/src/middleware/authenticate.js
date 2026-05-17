@@ -11,7 +11,7 @@ async function authenticate(req, res, next) {
     const payload = verifyToken(token);
     const user = await User.findByPk(payload.sub);
     if (!user) return res.status(401).json({ message: 'Utilisateur introuvable' });
-    // CDC v2.2 — compte suspendu par le QG : accès révoqué immédiatement.
+
     if (user.actif === false) {
       return res.status(403).json({
         code: 'ACCOUNT_SUSPENDED',

@@ -4,21 +4,13 @@ import { Link } from 'react-router-dom';
 const MADAGASCAR_PATH =
   'M 87.05 7.62 L 90.72 13.85 L 94.14 23.53 L 96.37 41.16 L 99.95 48.01 L 98.58 55.04 L 96.13 59.34 L 91.43 50.76 L 88.83 55.10 L 91.47 65.95 L 90.24 72.16 L 86.42 75.55 L 85.55 87.96 L 80.10 105.04 L 73.28 125.23 L 64.74 152.99 L 59.43 173.36 L 53.18 190.35 L 41.93 193.82 L 29.86 200.00 L 21.89 196.26 L 10.91 191.02 L 7.10 183.29 L 6.19 170.30 L 1.32 158.62 L 0.06 148.07 L 2.54 137.51 L 8.91 134.97 L 8.94 130.10 L 15.55 118.99 L 16.80 109.66 L 13.59 102.72 L 10.97 93.49 L 9.86 79.99 L 14.69 71.79 L 16.55 62.50 L 23.44 61.96 L 31.16 58.96 L 36.28 56.30 L 42.35 56.10 L 50.23 47.76 L 61.62 38.74 L 65.77 31.37 L 63.89 25.11 L 69.76 26.87 L 77.39 16.69 L 77.64 7.88 L 82.22 1.33 L 87.05 7.62 Z';
 
-/** ID YouTube de référence (poster + iframe de secours si le MP4 local indisponible). */
 const HERO_REFERENCE_YOUTUBE_ID = '1roGkBs8NbA';
 
-/** Fichier servi depuis `frontend/public/` (non versionné dans git par défaut). */
 const LOCAL_HERO_MP4 = 'videos/tana-hero-1080p.mp4';
 
-/**
- * Villes capitales régionales — coordonnées user space du viewBox SVG (alignées au `MADAGASCAR_PATH`,
- * axe N→S comme sur une carte géographique réelle).
- */
 const MAP_PINS = [
-  /* NE presqu’île ; x plus bas qu’extrême pointe vide */
-  { name: 'Antsiranana', x: 86, y: 11, color: '#c8102e', delay: 200 },
-  /* Golfe de Mojanga : même bande latérale que L 31–42 / y≈56–59 du path (évite l’« océan » à gauche) */
-  { name: 'Mahajanga', x: 38, y: 56, color: '#16a34a', delay: 400 },
+    { name: 'Antsiranana', x: 86, y: 11, color: '#c8102e', delay: 200 },
+    { name: 'Mahajanga', x: 38, y: 56, color: '#16a34a', delay: 400 },
   { name: 'Toamasina', x: 80, y: 83, color: '#1a73e8', delay: 600 },
   { name: 'Antananarivo', x: 51, y: 101, color: '#1a73e8', delay: 800 },
   { name: 'Antsirabe', x: 45, y: 110, color: '#16a34a', delay: 1000 },
@@ -55,11 +47,6 @@ function usePrefersReducedMotion(): boolean {
   return pref;
 }
 
-/**
- * Associe une section dominante selon ce qui coupe le mieux la ligne médiane du
- * conteneur (plus stable que plusieurs seuils avec l’observer), met à jour
- * `is-active` pour rejouer les animations, et expose `active` / `goTo`.
- */
 function useStoryScreen(scrollerRef: React.RefObject<HTMLElement | null>) {
   const [active, setActive] = useState<ScreenId>('manifesto');
 
@@ -307,13 +294,11 @@ export function PublicLanding() {
 
   return (
     <div className="story-page" data-story-active={active}>
-      {/* Marque + nav flottante */}
 
       <span className="story-sr-only" aria-live="polite">
         {liveLabel}
       </span>
 
-      {/* Indicateur latéral 4 points */}
       <aside className="story-dots" aria-label="Sommaire des sections">
         {SCREENS.map((s, idx) => (
           <button
@@ -334,7 +319,6 @@ export function PublicLanding() {
         ))}
       </aside>
 
-      {/* Vidéo plein viewport : net sur l’écran 1, floutée + teintée sur les suivants */}
       <div className="story-global-video" aria-hidden="true">
         <div className="story-manifesto-video-inner story-global-video-inner">
           <div className="story-manifesto-poster" style={{ backgroundImage: `url(${heroPosterUrl})` }} />
@@ -365,7 +349,6 @@ export function PublicLanding() {
       </div>
 
       <main className="story-scroller" ref={scrollerRef}>
-        {/* Écran 1 — Manifeste plein écran */}
         <section className="story-screen story-screen--manifesto" data-screen="manifesto">
           <div className="story-screen-content story-manifesto">
             <p className="story-manifesto-intro" data-anim="fade-up" data-delay="50">
@@ -403,7 +386,6 @@ export function PublicLanding() {
           </div>
         </section>
 
-        {/* Écran 2 — La carte vivante */}
         <section className="story-screen story-screen--carte" data-screen="carte">
           <div className="story-screen-tint story-screen-tint--carte" aria-hidden="true" />
           <div className="story-screen-bg" aria-hidden="true">
@@ -440,7 +422,6 @@ export function PublicLanding() {
           </div>
         </section>
 
-        {/* Écran 3 — Quatre regards */}
         <section className="story-screen story-screen--roles" data-screen="roles">
           <div className="story-screen-tint story-screen-tint--roles" aria-hidden="true" />
           <div className="story-screen-bg" aria-hidden="true">
@@ -490,7 +471,6 @@ export function PublicLanding() {
           </div>
         </section>
 
-        {/* Écran 4 — Agir */}
         <section className="story-screen story-screen--agir" data-screen="agir">
           <div className="story-screen-tint story-screen-tint--agir" aria-hidden="true" />
           <div className="story-screen-bg" aria-hidden="true">

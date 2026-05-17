@@ -1,22 +1,3 @@
-/**
- * CDC v2.3 — Gestion des AGENTS DE PATROUILLE par l'Admin QG.
- *
- * Routes protégées par JWT (authenticate) + requireRole(ADMIN_QG).
- * Le QG ne peut manipuler que ses agents de SA zone.
- *
- * Les équipes d'intervention de la zone peuvent avoir les spécialités ROUTE, JIRAMA,
- * NETTOYEUR ou REPARATEUR (réparation générale). À la création, latitude/longitude
- * désignent le lieu de rattachement (base, dépôt ou point notable).
- *
- * Actions :
- *   - GET    /api/qg/agents                     liste des AGENT_PATROUILLE de la zone
- *   - POST   /api/qg/agents                     crée un AGENT_PATROUILLE
- *   - PATCH  /api/qg/agents/:id                 met à jour identité / téléphone / matricule
- *   - PATCH  /api/qg/agents/:id/suspendre       actif = false  (libère le binding device)
- *   - PATCH  /api/qg/agents/:id/reactiver       actif = true
- *   - PATCH  /api/qg/agents/:id/reset-device    appareilUnique = null
- *   - DELETE /api/qg/agents/:id                 suppression (si aucun ticket signalé)
- */
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/authenticate');
@@ -39,7 +20,7 @@ function serializeAgent(u) {
     role: u.role,
     zoneId: u.zoneId,
     numeroTelephone: u.numeroTelephone,
-    specialite: u.specialite, // toujours null pour un AGENT_PATROUILLE
+    specialite: u.specialite,
     appareilLie: Boolean(u.appareilUnique),
     actif: u.actif,
     createdAt: u.createdAt,
@@ -59,7 +40,6 @@ async function findRepairInMyZone(id, zoneId) {
   });
 }
 
-/* ------------------------------- List ----------------------------- */
 router.get('/agents', async (req, res) => {
   if (!req.user.zoneId) {
     return res.status(400).json({ message: "Ce QG n'est rattaché à aucune zone" });
@@ -71,7 +51,6 @@ router.get('/agents', async (req, res) => {
   return res.json({ agents: agents.map(serializeAgent) });
 });
 
-/* ------------------------------ Create ---------------------------- */
 router.post(
   '/agents',
   body('nom').isString().trim().isLength({ min: 2, max: 120 }),
@@ -99,7 +78,7 @@ router.post(
       matricule: req.body.matricule ?? null,
       motDePasseHash: hash,
       role: RoleEnum.AGENT_PATROUILLE,
-      zoneId: req.user.zoneId, // secteur de l'agent = zone du QG
+      zoneId: req.user.zoneId,
       numeroTelephone: req.body.numeroTelephone,
       specialite: null,
       actif: true,
@@ -109,7 +88,6 @@ router.post(
   },
 );
 
-/* ------------------------------ Update ---------------------------- */
 router.patch(
   '/agents/:id',
   param('id').isUUID(),
@@ -135,7 +113,6 @@ router.patch(
   },
 );
 
-/* ---------------------------- Suspension -------------------------- */
 router.patch('/agents/:id/suspendre', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -158,7 +135,6 @@ router.patch('/agents/:id/reactiver', param('id').isUUID(), async (req, res) => 
   return res.json({ agent: serializeAgent(agent) });
 });
 
-/* ------------------------- Reset device bind ---------------------- */
 router.patch('/agents/:id/reset-device', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -170,7 +146,6 @@ router.patch('/agents/:id/reset-device', param('id').isUUID(), async (req, res) 
   return res.json({ agent: serializeAgent(agent) });
 });
 
-/* ------------------------------ Delete ---------------------------- */
 router.delete('/agents/:id', param('id').isUUID(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -189,7 +164,6 @@ router.delete('/agents/:id', param('id').isUUID(), async (req, res) => {
   return res.json({ ok: true });
 });
 
-/* --------------------- Equipes d'intervention --------------------- */
 function serializeRepair(u) {
   return {
     id: u.id,

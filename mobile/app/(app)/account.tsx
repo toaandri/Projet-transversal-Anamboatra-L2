@@ -8,12 +8,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../src/AuthContext';
-import { api } from '../../src/api';
-import { API_URL } from '../../src/config';
-import { colors, ROLE_LABELS } from '../../src/theme';
+import { useAuth } from '@/auth/AuthContext';
+import { api } from '@/lib/api';
+import { API_URL } from '@/lib/config';
+import { colors, ROLE_LABELS } from '@/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
-import type { Zone } from '../../src/types';
+import type { Zone } from '@/lib/types';
 
 export default function AccountScreen() {
   const { user, logout } = useAuth();

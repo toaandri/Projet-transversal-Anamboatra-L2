@@ -1,10 +1,8 @@
-/** Effectifs Admin QG : patrouilles et équipes d'intervention (pages séparées dans le dashboard). */
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '../api';
-import type { Agent, RepairAgent, Specialite } from '../types';
+import { api } from '@/lib/api';
+import type { Agent, RepairAgent, Specialite } from '@/lib/types';
 import { OrgEmailLocalField, fullOrgEmail } from './OrgEmailLocalField';
 
-/** Spécialités proposées à la création d’une équipe par le QG. */
 const SPECIALITE_OPTIONS_QG: { v: Specialite; l: string }[] = [
   { v: 'ROUTE', l: 'Route — voirie' },
   {
@@ -75,7 +73,6 @@ function useEffectifsLoad(
   return { agents, repairs, err, msg, setErr, setMsg, load };
 }
 
-/** Page QG : liste des agents de patrouille, création sous bouton. */
 export function QgPatrolAgentsPanel() {
   const { agents, err, msg, setErr, setMsg, load } = useEffectifsLoad(true, false);
   const [showCreate, setShowCreate] = useState(false);
@@ -144,7 +141,6 @@ export function QgPatrolAgentsPanel() {
   );
 }
 
-/** Page QG : équipes d'intervention, lieu choisi sur la carte. */
 export function QgInterventionAgentsPanel({
   lieuCoords,
   onLieuxCoordsChange,

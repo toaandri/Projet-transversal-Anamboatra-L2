@@ -8,15 +8,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../src/AuthContext';
-import { colors } from '../../src/theme';
-
-/**
- * Bottom tab bar Anamboatra Terrain (5 tabs) :
- *
- *   [ Carte ]  [ Signalements ]  [   +   ]  [ Citoyens ]  [ Compte ]
- *                                  ^ FAB central, vert, surélevé
- */
+import { useAuth } from '@/auth/AuthContext';
+import { colors } from '@/theme/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -31,13 +24,6 @@ function TabIcon({ name, focused, equipe }: { name: IoniconsName; focused: boole
   );
 }
 
-/**
- * Bouton central « + » : on n'utilise pas du tout le rendu par défaut du tab,
- * on dessine un gros cercle vert qui dépasse au-dessus de la barre.
- *
- * Pour les rôles non-agents (équipe, QG) on rend simplement un slot vide :
- * le tab reste présent dans la barre mais n'est plus cliquable.
- */
 function PlusTabButton({ enabled, equipe }: { enabled: boolean; equipe?: boolean }) {
   const router = useRouter();
   if (!enabled) {
@@ -104,11 +90,10 @@ export default function AppLayout() {
           ...styles.tabBar,
           ...(isEquipe ? styles.tabBarEquipe : {}),
         },
-        // Équipe : largeur par onglet (3 boutons répartis + mince séparateur au centre.
+
         tabBarItemStyle: isEquipe ? undefined : styles.tabBarItemDefault,
       }}
     >
-      {/* ── Carte ────────────────────────────────────────────── */}
       <Tabs.Screen
         name="map"
         options={{
@@ -118,7 +103,6 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Signalements (AGENT) / Missions (EQUIPE) ─────────── */}
       <Tabs.Screen
         name="tickets"
         options={{
@@ -137,7 +121,6 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Bouton central FAB (agent) / slot vide (équipe) ───── */}
       <Tabs.Screen
         name="report"
         options={{
@@ -147,7 +130,6 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Citoyens (AGENT seulement) ────────────────────────── */}
       <Tabs.Screen
         name="suggestions"
         options={{
@@ -157,7 +139,6 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Compte ────────────────────────────────────────────── */}
       <Tabs.Screen
         name="account"
         options={{
@@ -167,7 +148,6 @@ export default function AppLayout() {
         }}
       />
 
-      {/* Écrans sans tab (navigation programmatique uniquement) */}
       <Tabs.Screen name="ticket/[id]" options={{ href: null }} />
     </Tabs>
   );
@@ -184,15 +164,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingHorizontal: 6,
-    // ombre légère vers le haut
+
     shadowColor: '#0e2a14',
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: -2 },
     elevation: 8,
   },
-  /** Onglets redistribués (4 pers. visibles) + labels un peu plus aérés */
-  tabBarEquipe: {
+    tabBarEquipe: {
     height: TAB_BAR_HEIGHT_EQUIPE,
     paddingHorizontal: 14,
     paddingTop: Platform.OS === 'ios' ? 8 : 6,
@@ -201,8 +180,7 @@ const styles = StyleSheet.create({
   tabBarItemDefault: {
     paddingTop: 6,
   },
-  /** Équipe : 3 onglets utiles se partagent la largeur ; le « trou » du FAB est minimal. */
-  tabBarItemEquipeTab: {
+    tabBarItemEquipeTab: {
     flex: 1,
     paddingTop: 4,
     paddingHorizontal: 4,
@@ -234,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    // surélever au-dessus de la barre
+
     marginBottom: Platform.OS === 'ios' ? 16 : 14,
     borderWidth: 4,
     borderColor: colors.panel,

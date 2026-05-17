@@ -24,29 +24,27 @@ function defineUser(sequelize) {
         ),
         allowNull: false,
       },
-      // Commune pour ADMIN_QG/AGENT_PATROUILLE, dépôt pour EQUIPE_INTERVENTION,
-      // NULL pour SUPER_ADMIN et CITOYEN.
+
       zoneId: { type: DataTypes.UUID, allowNull: true, field: 'zone_id' },
-      // CDC v2.3 — profils opérationnels
+
       numeroTelephone: {
         type: DataTypes.STRING(32),
         allowNull: true,
         field: 'numero_telephone',
       },
-      // Spécialité d'une EQUIPE_INTERVENTION (cf. SpecialiteEnum)
+
       specialite: {
         type: DataTypes.ENUM('ROUTE', 'JIRAMA', 'MACON', 'NETTOYEUR', 'REPARATEUR'),
         allowNull: true,
       },
-      // Fingerprint terminal scellé au premier login (UNIQUE).
-      // Bloque la copie des secrets de l'application sur un autre appareil.
+
       appareilUnique: {
         type: DataTypes.STRING(191),
         allowNull: true,
         unique: true,
         field: 'appareil_unique',
       },
-      // FALSE = compte suspendu par le QG, libère le binding device.
+
       actif: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

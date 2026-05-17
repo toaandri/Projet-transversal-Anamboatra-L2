@@ -11,12 +11,12 @@ function defineZone(sequelize) {
       },
       nom: { type: DataTypes.STRING(255), allowNull: false },
       type: {
-        // CDC v2.3 — DEPOT_REPARATION = garage / point de départ des équipes
+
         type: DataTypes.ENUM('ARRONDISSEMENT', 'ROUTE_NATIONALE', 'DEPOT_REPARATION'),
         allowNull: false,
       },
       code: { type: DataTypes.STRING(64), allowNull: false, unique: true },
-      // CDC v2.2 — numéro de contact officiel du QG (saisi via la console admin)
+
       numeroQg: {
         type: DataTypes.STRING(32),
         allowNull: true,

@@ -15,7 +15,7 @@ async function optionalAuth(req, res, next) {
       req.auth = { sub: payload.sub, role: user.role, zoneId: user.zoneId };
     }
   } catch {
-    // jeton invalide : traiter comme anonyme
+
   }
   next();
 }

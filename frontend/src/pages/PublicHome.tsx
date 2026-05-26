@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { MadagascarBrandMark } from '@/components/MadagascarBrandMark';
 import { MapView } from '@/components/MapView';
 import { STATUT_LABELS } from '@/theme/mapColors';
 import type { GeoJsonFeature, Statut, TypeInfrastructure } from '@/lib/types';
@@ -181,13 +182,10 @@ export function PublicHome() {
 
         <aside className="panel side" id="public-carto-side" aria-hidden={!sideOpen}>
           <div className="side-header">
-            <span className="qg-mark" aria-hidden="true">
-              <span className="qg-mark-flag" />
-              <span className="qg-mark-pin" />
-            </span>
+            <MadagascarBrandMark />
             <div className="qg-header-text">
               <div>
-                <small>Plateforme Anamboatra</small>
+                <small>République de Madagascar</small>
               </div>
               <div>
                 <strong>Carte publique</strong>

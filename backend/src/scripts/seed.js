@@ -8,8 +8,8 @@ const { RoleEnum } = require('../constants/enums');
 const SUPER_ADMIN = Object.freeze({
   email: 'admin@anamboatra.mg',
   password: 'admin1234',
-  nom: 'Administrateur',
-  prenom: 'Système',
+  nom: 'MTP national',
+  prenom: 'Admin',
 });
 
 async function seed() {
@@ -36,6 +36,8 @@ async function seed() {
   if (!created) {
 
     await admin.update({
+      nom: SUPER_ADMIN.nom,
+      prenom: SUPER_ADMIN.prenom,
       role: RoleEnum.SUPER_ADMIN,
       actif: true,
     });

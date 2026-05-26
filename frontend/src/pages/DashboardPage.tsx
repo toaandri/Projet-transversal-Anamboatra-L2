@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/auth/useAuth';
 import { QgInterventionAgentsPanel, QgPatrolAgentsPanel } from '@/components/EffectifsPanel';
 import { anam, anamRgba, typeInfraColors, statutUiColors } from '@/theme/anamboatraTheme';
+import { MadagascarBrandMark } from '@/components/MadagascarBrandMark';
 import { MapView } from '@/components/MapView';
 import { STATUT_LABELS, ROLE_LABELS } from '@/theme/mapColors';
 import type {
@@ -295,7 +296,7 @@ export function DashboardPage() {
     <div className="page dashboard">
       <header className="topbar">
         <div className="brand">
-          <span className="logo" />
+          <MadagascarBrandMark />
           <div>
             <strong>{role === 'CITOYEN' ? 'Espace citoyen — Anamboatra' : 'Suivi des interventions'}</strong>
             <div className="muted small">
@@ -319,19 +320,16 @@ export function DashboardPage() {
         </button>
         <aside className="panel side" ref={sideRef}>
           <div className="side-header">
-            <span className="qg-mark" aria-hidden="true">
-              <span className="qg-mark-flag" />
-              <span className="qg-mark-pin" />
-            </span>
+            <MadagascarBrandMark />
             <div className="qg-header-text">
               {role === 'CITOYEN' ? (
                 <>
-                  <small>Plateforme Anamboatra</small>
+                  <small>République de Madagascar</small>
                   <strong>Espace citoyen</strong>
                 </>
               ) : (
                 <>
-                  <small>Ministère des Travaux Publics</small>
+                  <small>République de Madagascar</small>
                   <strong>Quartier général — Anamboatra</strong>
                 </>
               )}
@@ -1139,7 +1137,7 @@ function MobileOnlyScreen({
     <div className="page mobile-only">
       <header className="topbar">
         <div className="brand">
-          <span className="logo" />
+          <MadagascarBrandMark />
           <div>
             <strong>Anamboatra</strong>
             <div className="muted small">{userName ? `${userName} · ${label}` : label}</div>

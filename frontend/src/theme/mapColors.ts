@@ -36,7 +36,7 @@ export const STATUT_LABELS: Record<Statut, string> = {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: 'Super-administrateur MTP',
+  SUPER_ADMIN: 'Administration Ministere',
   AGENT_PATROUILLE: 'Agent de patrouille',
   ADMIN_QG: 'Administrateur de quartier général',
   EQUIPE_INTERVENTION: "Équipe d'intervention",

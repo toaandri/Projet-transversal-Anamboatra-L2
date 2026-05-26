@@ -1807,7 +1807,17 @@ code {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(145deg, #e2e889 0%, #3e605f 55%, #2d4847 100%);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(62, 96, 95, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.logo::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 38%;
+  background: linear-gradient(to bottom, #fc3d32 0%, #fc3d32 50%, #007e3a 50%, #007e3a 100%);
 }
 
 .nav {
@@ -2235,8 +2245,12 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(145deg, #e2e889 0%, #3e605f 55%, #2d4847 100%);
   flex: 0 0 auto;
+}
+
+.dashboard .topbar .brand .qg-mark {
+  width: 36px;
+  height: 36px;
 }
 
 .dashboard .side-header strong {
@@ -3499,11 +3513,25 @@ textarea {
   background: #ffffff;
   box-shadow: 0 4px 14px rgba(62, 96, 95, 0.22);
   overflow: hidden;
+  border: 1px solid rgba(26, 36, 34, 0.08);
+}
+
+.dashboard .qg-mark::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  background: #ffffff;
+  z-index: 0;
+  border-right: 1px solid rgba(26, 36, 34, 0.06);
 }
 
 .dashboard .qg-mark-flag {
   position: absolute;
   inset: 0 0 0 38%;
+  z-index: 1;
   background: linear-gradient(to bottom, #fc3d32 0%, #fc3d32 50%, #007e3a 50%, #007e3a 100%);
 }
 
@@ -3513,6 +3541,7 @@ textarea {
   left: 6px;
   width: 14px;
   height: 14px;
+  z-index: 2;
   background: #0b3d91;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);

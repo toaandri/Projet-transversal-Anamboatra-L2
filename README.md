@@ -1,6 +1,6 @@
 # Projet-transversal-Anamboatra-L2
 
-Projet de fin d’année L2 — **Anamboatra** (SGRI-2035), d’après le cahier des charges v2.1.
+Projet de fin d’année L2 — **Anamboatra** (SGRI-2035). **Livre / cahier des normes :** [`CahierDesNormes-Maharavo.docx`](CahierDesNormes-Maharavo.docx). **Cahier des charges :** [`Anamboatra_Cahier_des_Charges_v3.docx`](Anamboatra_Cahier_des_Charges_v3.docx). Modèle ESIE : [`CahierDesNormes-ProjetTransversal-L2SIO.docx`](CahierDesNormes-ProjetTransversal-L2SIO.docx).
 
 ## Dépôt (monorepo)
 
@@ -9,6 +9,24 @@ Projet de fin d’année L2 — **Anamboatra** (SGRI-2035), d’après le cahier
 | **`backend/`** | API Node.js (Express), JWT, Socket.io, PostgreSQL, Multer |
 | **`frontend/`** | Site citoyen + poste QG (React / Vite) + build Electron |
 | **`mobile/`** | Application terrain (Expo / expo-router) |
+| **`docs/`** | [Normes Maharavo](docs/CahierDesNormes-Maharavo.md) · [CDC](docs/Cahier_des_charges_Anamboatra_v3.0_FINAL.md) · [UML](docs/anamboatra.puml) |
+
+**Régénérer la documentation (modèle L2 SIO obligatoire) :**
+
+```bash
+python scripts/build_docs_additive.py    # enrichit les .md sans supprimer votre texte
+python scripts/generate_docx_proper.py # produit CahierDesNormes-Maharavo.docx + Anamboatra_Cahier_des_Charges_v3.docx
+```
+
+Sources éditables : [`docs/CahierDesNormes-Maharavo.md`](docs/CahierDesNormes-Maharavo.md) · [`docs/Cahier_des_charges_Anamboatra_v3.0_FINAL.md`](docs/Cahier_des_charges_Anamboatra_v3.0_FINAL.md)
+
+**Présentation soutenance (PowerPoint) :**
+
+```bash
+python scripts/generate_presentation.py
+```
+
+Fichier produit : [`docs/Anamboatra_Presentation_Soutenance.pptx`](docs/Anamboatra_Presentation_Soutenance.pptx) — Introduction, Contexte, Solution, Technologies, Diagrammes, Démonstration.
 
 ### Structure des sources
 
@@ -45,6 +63,8 @@ mobile/
 ```
 
 Les imports transverses utilisent l’alias **`@/`** → `src/` (frontend et mobile).
+
+Modélisation UML (vue institutionnelle MTP / postes communaux / terrain) : [`docs/anamboatra.puml`](docs/anamboatra.puml) — [PlantUML](https://plantuml.com/fr/).
 
 ### Démarrer le back-end
 

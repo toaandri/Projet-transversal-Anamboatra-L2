@@ -20,6 +20,8 @@ import type {
   Zone,
 } from '@/lib/types';
 import { OrgEmailLocalField, fullOrgEmail, localPartFromInput } from '@/components/OrgEmailLocalField';
+import { MadagascarBrandMark } from '@/components/MadagascarBrandMark';
+import { ROLE_LABELS } from '@/theme/mapColors';
 import { anam } from '@/theme/anamboatraTheme';
 
 const TANA = { lat: -18.8792, lng: 47.5079 };
@@ -371,7 +373,7 @@ export function AdminPage() {
     <div className="page dashboard">
       <header className="topbar">
         <div className="brand">
-          <span className="logo" aria-hidden="true" />
+          <MadagascarBrandMark />
           <div>
             <div className="muted small" style={{ fontWeight: 600, letterSpacing: '0.02em' }}>
               République de Madagascar
@@ -379,11 +381,13 @@ export function AdminPage() {
             <strong>Ministère des Travaux Publics</strong>
             <div className="muted small">
               Référentiel territorial — Anamboatra
-              {mode === 'jwt' && (user?.prenom || user?.nom)
-                ? ` · ${`${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim()}`
-                : mode === 'token'
-                  ? ' · session jeton d’installation'
-                  : ''}
+              {mode === 'jwt' && user?.role === 'SUPER_ADMIN'
+                ? ` · ${ROLE_LABELS.SUPER_ADMIN}`
+                : mode === 'jwt' && (user?.prenom || user?.nom)
+                  ? ` · ${`${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim()}`
+                  : mode === 'token'
+                    ? ' · session jeton d’installation'
+                    : ''}
             </div>
           </div>
         </div>
@@ -417,16 +421,16 @@ export function AdminPage() {
         </button>
         <aside className="panel side">
           <div className="side-header">
-            <span className="logo" aria-hidden="true" />
-            <div>
-              <div className="muted small" style={{ fontWeight: 600 }}>
-                Ministère des Travaux Publics
-              </div>
+            <MadagascarBrandMark />
+            <div className="qg-header-text">
+              <small>République de Madagascar</small>
               <strong>Référentiel territorial</strong>
-              <div className="muted small">Anamboatra</div>
+              <div className="muted small">Anamboatra </div>
               <div className="muted" style={{ marginTop: 6, fontSize: '0.88rem' }}>
                 {mode === 'jwt'
-                  ? `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || 'Super-administrateur MTP'
+                  ? user?.role === 'SUPER_ADMIN'
+                    ? ROLE_LABELS.SUPER_ADMIN
+                    : `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || ROLE_LABELS.SUPER_ADMIN
                   : 'Session jeton d’installation'}
               </div>
             </div>

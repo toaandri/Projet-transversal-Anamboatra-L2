@@ -17,6 +17,9 @@ const TYPE_LABELS: Record<string, string> = {
   EAU: 'Électricité / eau',
 };
 
+const SUGGESTION_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const SUGGESTION_PHOTO_MAX_SIZE = 8 * 1024 * 1024;
+
 const TYPES: { v: TypeInfrastructure; l: string; color: string }[] = [
   { v: 'ROUTE', l: 'Route', color: typeInfraColors.ROUTE! },
   { v: 'ELECTRICITE_EAU', l: 'Électricité / eau', color: typeInfraColors.ELECTRICITE_EAU! },
@@ -122,10 +125,28 @@ export function PublicHome() {
     e.preventDefault();
     setOk(null);
     setErr(null);
+
     if (lat === null || lng === null) {
       setErr('Une position géographique sur la carte est obligatoire.');
       return;
     }
+
+    if (!description.trim() || description.trim().length < 3) {
+      setErr('Description trop courte. Renseignez au moins 3 caractères.');
+      return;
+    }
+
+    if (photo) {
+      if (!SUGGESTION_PHOTO_TYPES.includes(photo.type)) {
+        setErr('Format de photo invalide. Utilisez JPEG, PNG ou WebP.');
+        return;
+      }
+      if (photo.size > SUGGESTION_PHOTO_MAX_SIZE) {
+        setErr('Photo trop volumineuse. Limite 8 Mo.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const { zoneAttribution } = await api.publicSuggestion({

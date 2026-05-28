@@ -118,16 +118,21 @@ export const api = {
     fd.append('longitude', String(params.longitude));
     if (params.pseudoCitoyen?.trim()) fd.append('pseudoCitoyen', params.pseudoCitoyen.trim());
     if (params.photo) fd.append('photo', params.photo);
+
     const res = await fetch(apiUrl('/api/public/suggestions'), { method: 'POST', body: fd });
-    const raw = await parseJson<{
-      suggestion?: unknown;
-      zoneAttribution?: { nom: string; code: string };
-      message?: string;
-      errors?: unknown;
-    }>(res);
+    const text = await res.text();
+    let raw: { suggestion?: unknown; zoneAttribution?: { nom: string; code: string }; message?: string; errors?: unknown } = {};
+    if (text) {
+      try {
+        raw = JSON.parse(text);
+      } catch {
+        raw = { message: text };
+      }
+    }
+
     if (!res.ok) {
       const message = typeof raw.message === 'string' ? raw.message : null;
-      throw new Error(message || `Erreur ${res.status}`);
+      throw new Error(message || `Erreur ${res.status}: ${text || 'Réponse serveur invalide'}`);
     }
     return raw as { suggestion: unknown; zoneAttribution?: { nom: string; code: string } };
   },

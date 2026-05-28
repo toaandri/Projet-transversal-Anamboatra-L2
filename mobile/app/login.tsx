@@ -53,14 +53,6 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brand}>
-            <View style={styles.logo}>
-              <View style={styles.logoFlag}>
-                <View style={[styles.flagBand, { backgroundColor: colors.white }]} />
-                <View style={[styles.flagBand, { backgroundColor: colors.red }]} />
-                <View style={[styles.flagBand, { backgroundColor: colors.accent }]} />
-              </View>
-              <View style={styles.logoPin} />
-            </View>
             <Text style={styles.brandEyebrow}>République de Madagascar</Text>
             <Text style={styles.title}>Anamboatra</Text>
             <Text style={styles.subtitle}>
@@ -71,8 +63,7 @@ export default function LoginScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Connexion agent</Text>
             <Text style={styles.cardLead}>
-              Réservé aux agents de patrouille et aux équipes d’intervention. Les identifiants sont délivrés par le
-              QG de rattachement.
+              Agents de patrouille et équipes d'intervention
             </Text>
 
             <Text style={styles.label}>Adresse e-mail</Text>
@@ -106,16 +97,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.footer}>
-            <View style={styles.footerLine}>
-              <View style={[styles.dot, { backgroundColor: colors.accent }]} />
-              <Text style={styles.footerText}>Serveur : {API_URL}</Text>
-            </View>
-            <Text style={styles.footerHint}>
-              En environnement local : téléphone serveur exposé depuis le même segment réseau que le poste de
-              développement ; vérifiez que le backend Anamboatra est démarré.
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

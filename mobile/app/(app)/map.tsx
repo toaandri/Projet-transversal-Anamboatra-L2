@@ -236,13 +236,6 @@ export default function MapScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
-            <View style={styles.brandLogo}>
-              <View style={styles.brandFlag}>
-                <View style={[styles.brandFlagBand, { backgroundColor: colors.white }]} />
-                <View style={[styles.brandFlagBand, { backgroundColor: colors.red }]} />
-                <View style={[styles.brandFlagBand, { backgroundColor: colors.accent }]} />
-              </View>
-            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerEyebrow}>République de Madagascar</Text>
               <Text style={styles.headerTitle} numberOfLines={1}>
